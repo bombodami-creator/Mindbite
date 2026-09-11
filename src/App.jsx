@@ -431,7 +431,7 @@ const MESI = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Lug
 
 // Incolla qui l'URL del tuo Worker (vedi fatsecret-backend/README.md) per
 // attivare la ricerca vera su FatSecret. Vuoto = usa solo l'elenco locale.
-const FATSECRET_API_BASE = "https://mindbite.bombodami.workers.dev";
+const FATSECRET_API_BASE = "https://mindebite.bombodami.workers.dev";
 
 // Incolla qui l'URL del tuo backend Mindbite (vedi mindbite-backend/README.md)
 // per attivare login vero e sincronizzazione dati online multi-dispositivo.
@@ -616,6 +616,26 @@ function generaCodice() {
 
 function generaCodiceTemporaneo() {
   return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+// Punto unico per tutte le chiamate a Claude (riconoscimento foto, Consiglia,
+// Assistente, consigli dispensa): centralizza endpoint, modello e il
+// parsing della risposta (che arriva sempre come testo JSON, a volte
+// avvolto in blocchi markdown da ripulire prima di interpretarla).
+async function chiediAClaude(content, maxTokens = 1000) {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: maxTokens,
+      messages: [{ role: "user", content }],
+    }),
+  });
+  const data = await response.json();
+  const testo = (data.content || []).map((b) => b.text || "").join("").trim();
+  const pulito = testo.replace(/```json|```/g, "").trim();
+  return JSON.parse(pulito);
 }
 
 async function ridimensionaImmagine(file, maxLato = 640, qualita = 0.7) {
@@ -1211,6 +1231,7 @@ export default function MindbiteApp() {
   }
 
   useEffect(() => {
+    if (caricandoAccount) return; // aspetta che window.storage sia quello giusto (Firestore/backend/locale)
     (async () => {
       try {
         const r = await window.storage.get(chiaveGiorno(oggi), false);
@@ -1221,11 +1242,14 @@ export default function MindbiteApp() {
       setPastiCaricati(true);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [caricandoAccount]);
 
   useEffect(() => {
     if (!pastiCaricati) return;
-    window.storage.set(chiaveGiorno(oggi), JSON.stringify(pastiOggi), false).catch(() => {});
+    window.storage.set(chiaveGiorno(oggi), JSON.stringify(pastiOggi), false).catch(() => {
+      setToastDiario("Salvataggio non riuscito: controlla la connessione e riprova.");
+      setTimeout(() => setToastDiario(""), 5000);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pastiOggi, pastiCaricati]);
 

@@ -1504,34 +1504,17 @@ export default function MindbiteApp() {
     setFotoSubScreen("analisi");
     try {
       const base64 = dataUrl.split(",")[1];
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1000,
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
-                {
-                  type: "text",
-                  text:
-                    "Sei un nutrizionista. Analizza la foto del piatto e stima ingredienti, grammi e valori nutrizionali. " +
-                    "Rispondi SOLO con un oggetto JSON valido, senza testo introduttivo, senza spiegazioni, senza blocchi markdown. " +
-                    "Formato esatto: {\"nomePiatto\": string, \"ingredienti\": [{\"nome\": string, \"grammi\": number, \"kcal\": number}], " +
-                    "\"kcalTotali\": number, \"carboidratiG\": number, \"grassiG\": number, \"proteineG\": number}",
-                },
-              ],
-            },
-          ],
-        }),
-      });
-      const data = await response.json();
-      const testo = (data.content || []).map((b) => b.text || "").join("").trim();
-      const pulito = testo.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(pulito);
+      const parsed = await chiediAClaude([
+        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
+        {
+          type: "text",
+          text:
+            "Sei un nutrizionista. Analizza la foto del piatto e stima ingredienti, grammi e valori nutrizionali. " +
+            "Rispondi SOLO con un oggetto JSON valido, senza testo introduttivo, senza spiegazioni, senza blocchi markdown. " +
+            "Formato esatto: {\"nomePiatto\": string, \"ingredienti\": [{\"nome\": string, \"grammi\": number, \"kcal\": number}], " +
+            "\"kcalTotali\": number, \"carboidratiG\": number, \"grassiG\": number, \"proteineG\": number}",
+        },
+      ]);
 
       const ing = (parsed.ingredienti || []).map((i) => ({
         nome: i.nome,
@@ -1813,33 +1796,16 @@ export default function MindbiteApp() {
     try {
       const base64 = dataUrl.split(",")[1];
       const luogo = categoriaAttiva === "frigo" ? "frigorifero" : "dispensa";
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1000,
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
-                {
-                  type: "text",
-                  text:
-                    `Questa è una foto dentro un ${luogo}. Elenca gli alimenti che riesci a riconoscere con una stima della quantità. ` +
-                    "Rispondi SOLO con un array JSON valido, senza testo introduttivo, senza blocchi markdown. " +
-                    'Formato esatto: [{"nome": string, "quantita": string}]. Se non riconosci nulla con certezza, rispondi con un array vuoto [].',
-                },
-              ],
-            },
-          ],
-        }),
-      });
-      const data = await response.json();
-      const testo = (data.content || []).map((b) => b.text || "").join("").trim();
-      const pulito = testo.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(pulito);
+      const parsed = await chiediAClaude([
+        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
+        {
+          type: "text",
+          text:
+            `Questa è una foto dentro un ${luogo}. Elenca gli alimenti che riesci a riconoscere con una stima della quantità. ` +
+            "Rispondi SOLO con un array JSON valido, senza testo introduttivo, senza blocchi markdown. " +
+            'Formato esatto: [{"nome": string, "quantita": string}]. Se non riconosci nulla con certezza, rispondi con un array vuoto [].',
+        },
+      ]);
       const lista = Array.isArray(parsed) ? parsed : [];
       setRisultatiScansione(lista.map((it, i) => ({ id: "s_" + i, nome: it.nome, quantita: it.quantita || "", selezionato: true })));
       setScansioneSub("conferma");
@@ -2017,19 +1983,7 @@ export default function MindbiteApp() {
     content.push({ type: "text", text: testoPrompt });
 
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1200,
-          messages: [{ role: "user", content }],
-        }),
-      });
-      const data = await response.json();
-      const testo = (data.content || []).map((b) => b.text || "").join("").trim();
-      const pulito = testo.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(pulito);
+      const parsed = await chiediAClaude(content, 1200);
       const lista = (Array.isArray(parsed) ? parsed : []).map((p) => ({ ...p, modo: consiglioModo }));
       setProposteCena(lista);
       // La foto del menu ha esaurito il suo scopo: la scartiamo subito, non serve piu' e non va salvata.
@@ -2217,19 +2171,7 @@ export default function MindbiteApp() {
       "Rispondi SOLO con un array JSON valido, senza testo introduttivo, senza blocchi markdown. " +
       'Formato esatto: [{"titolo": string, "testo": string}]';
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 500,
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
-      const data = await response.json();
-      const testo = (data.content || []).map((b) => b.text || "").join("").trim();
-      const pulito = testo.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(pulito);
+      const parsed = await chiediAClaude(prompt, 500);
       setAssistenteOsservazioni(Array.isArray(parsed) ? parsed : []);
     } catch (e) {
       console.error(e);
@@ -2257,19 +2199,7 @@ export default function MindbiteApp() {
       "Rispondi SOLO con un array JSON valido, senza testo introduttivo, senza spiegazioni, senza blocchi markdown. Formato esatto: " +
       '[{"nome": string, "categoria": "frigo" o "dispensa", "motivo": string}]';
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 600,
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
-      const data = await response.json();
-      const testo = (data.content || []).map((b) => b.text || "").join("").trim();
-      const pulito = testo.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(pulito);
+      const parsed = await chiediAClaude(prompt, 600);
       setConsigliDispensa(Array.isArray(parsed) ? parsed : []);
     } catch (e) {
       console.error(e);

@@ -622,17 +622,23 @@ function generaCodiceTemporaneo() {
 // Assistente, consigli dispensa): centralizza endpoint, modello e il
 // parsing della risposta (che arriva sempre come testo JSON, a volte
 // avvolto in blocchi markdown da ripulire prima di interpretarla).
+// Se FATSECRET_API_BASE e' configurato (lo stesso Worker gestisce anche
+// l'endpoint /api/claude, con una vera chiave Anthropic lato server),
+// passa da li' — necessario fuori da Claude, dove non c'e' altrimenti
+// nessuna chiave valida per chiamare Anthropic direttamente.
 async function chiediAClaude(content, maxTokens = 1000) {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const usaBackend = !!FATSECRET_API_BASE;
+  const endpoint = usaBackend ? FATSECRET_API_BASE + "/api/claude" : "https://api.anthropic.com/v1/messages";
+  const corpo = usaBackend
+    ? { content, maxTokens }
+    : { model: "claude-sonnet-4-6", max_tokens: maxTokens, messages: [{ role: "user", content }] };
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: maxTokens,
-      messages: [{ role: "user", content }],
-    }),
+    body: JSON.stringify(corpo),
   });
   const data = await response.json();
+  if (data.error) throw new Error(typeof data.error === "string" ? data.error : "Errore dal servizio AI");
   const testo = (data.content || []).map((b) => b.text || "").join("").trim();
   const pulito = testo.replace(/```json|```/g, "").trim();
   return JSON.parse(pulito);
@@ -939,8 +945,12 @@ export default function MindbiteApp() {
     return {
       email: accountEmail,
       password: accountPassword,
+      nome,
       sesso, eta, peso, altezza, pesoObiettivo,
       attivita, obiettivo, ritmo, carbP, fatP,
+      tema,
+      metodoConfermato: letturaMetodoConfermata,
+      metodoConfermatoData,
       ...extra,
     };
   }
@@ -954,6 +964,7 @@ export default function MindbiteApp() {
   }
 
   function caricaProfiloInStato(p) {
+    setNome(p.nome || "");
     setSesso(p.sesso || "uomo");
     setEta(p.eta || "");
     setPeso(p.peso || "");
@@ -964,6 +975,9 @@ export default function MindbiteApp() {
     setRitmo(p.ritmo != null ? p.ritmo : 0.5);
     setCarbP(p.carbP != null ? p.carbP : 40);
     setFatP(p.fatP != null ? p.fatP : 30);
+    setTema(p.tema || "chiaro");
+    setLetturaMetodoConfermata(!!p.metodoConfermato);
+    setMetodoConfermatoData(p.metodoConfermatoData || null);
   }
 
   async function accedi() {
@@ -1198,6 +1212,10 @@ export default function MindbiteApp() {
     }
   }
 
+  const [letturaMetodoConfermata, setLetturaMetodoConfermata] = useState(false);
+  const [metodoConfermatoData, setMetodoConfermatoData] = useState(null);
+
+  const [nome, setNome] = useState("");
   const [sesso, setSesso] = useState("uomo");
   const [eta, setEta] = useState("");
   const [peso, setPeso] = useState("");
@@ -2372,7 +2390,36 @@ export default function MindbiteApp() {
               <div className="kn-ai-card-text">Guarda l'andamento della settimana e ricevi osservazioni pratiche generate su misura per te.</div>
             </div>
 
-            <button className="kn-btn" style={{ marginTop: 8 }} onClick={() => setScreen("step1")}>Inizia</button>
+            <button className="kn-btn" style={{ marginTop: 8 }} onClick={() => setScreen("metodologia")}>Inizia</button>
+          </>
+        )}
+
+        {screen === "metodologia" && (
+          <>
+            <h1 className="kn-h1">Come viene calcolato</h1>
+            <p className="kn-sub">
+              Il fabbisogno calorico è stimato con la formula di Mifflin-St Jeor, il metodo attualmente più accurato e riconosciuto in ambito nutrizionale per il calcolo del metabolismo basale, applicato in base a sesso, età, peso e altezza. La ripartizione dei macronutrienti segue i range raccomandati da SINU/LARN ed EFSA.
+            </p>
+            <p className="kn-sub">
+              Valido per soggetti adulti sani, non in gravidanza/allattamento e non atleti agonisti. È una stima statistica (margine d'errore tipico ±10%), non una misurazione clinica individuale: non sostituisce il parere di un medico o nutrizionista.
+            </p>
+            <div className="kn-check-row" onClick={() => setLetturaMetodoConfermata((v) => !v)}>
+              <span className={"kn-check-box" + (letturaMetodoConfermata ? " on" : "")}>{letturaMetodoConfermata ? "✓" : ""}</span>
+              Ho letto e compreso
+            </div>
+            <button
+              className="kn-btn"
+              style={{ marginTop: 8 }}
+              onClick={async () => {
+                const adesso = new Date().toISOString();
+                setMetodoConfermatoData(adesso);
+                await salvaProfiloPersistente({ metodoConfermato: true, metodoConfermatoData: adesso });
+                setScreen("step1");
+              }}
+              disabled={!letturaMetodoConfermata}
+            >
+              Continua
+            </button>
           </>
         )}
 
@@ -2381,6 +2428,10 @@ export default function MindbiteApp() {
             <StepTabs current={1} />
             <h1 className="kn-h1">I tuoi dati</h1>
             <p className="kn-sub">Servono per calcolare il tuo fabbisogno calorico con la formula di Mifflin-St Jeor.</p>
+            <div className="kn-field">
+              <label className="kn-label">Nome</label>
+              <input className="kn-input" type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="es. Damiano" />
+            </div>
             <div className="kn-field">
               <label className="kn-label">Sesso</label>
               <div className="kn-toggle-row">
@@ -2517,7 +2568,7 @@ export default function MindbiteApp() {
               {vistaOggi ? (
                 <div className="kn-home-header">
                   <div style={{ flex: 1 }}>
-                    <div className="kn-greeting">Ciao!</div>
+                    <div className="kn-greeting">Ciao{nome ? `, ${nome}` : ""}!</div>
                     <div className="kn-greeting-sub">{oggi.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</div>
                   </div>
                   <button className="kn-icon-btn" onClick={() => { setScreen("assistente"); generaOsservazioniAI(); }} title="Assistente" style={{ marginRight: 6 }}>🤖</button>
@@ -2850,6 +2901,7 @@ export default function MindbiteApp() {
 
             <div className="kn-profile-section">
               <div className="kn-profile-heading">Dati personali</div>
+              <div className="kn-field"><label className="kn-label">Nome</label><input className="kn-input" type="text" value={nome} onChange={(e) => segna(setNome)(e.target.value)} /></div>
               <div className="kn-toggle-row">
                 <div className={"kn-toggle" + (sesso === "uomo" ? " sel" : "")} onClick={() => segna(setSesso)("uomo")}>Uomo</div>
                 <div className={"kn-toggle" + (sesso === "donna" ? " sel" : "")} onClick={() => segna(setSesso)("donna")}>Donna</div>
@@ -3773,7 +3825,7 @@ export default function MindbiteApp() {
         )}
 
       </div>
-      <p className="kn-credit">creato da Damiano Bombonato</p>
+      <p className="kn-credit">Stima statistica (Mifflin-St Jeor, ±10%): non sostituisce il parere di un medico o nutrizionista.</p>
     </div>
   );
 }

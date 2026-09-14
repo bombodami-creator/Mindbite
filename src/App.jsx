@@ -80,6 +80,10 @@ const STYLE = `
 }
 .kn-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
+.kn-pwd-wrap { position: relative; }
+.kn-pwd-wrap .kn-input { padding-right: 44px; }
+.kn-pwd-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 17px; padding: 8px; line-height: 1; color: var(--ink-soft); }
+
 .kn-btn {
   width: 100%; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600;
   padding: 14px 16px; border-radius: var(--radius-md);
@@ -874,6 +878,8 @@ export default function MindbiteApp() {
   const [accountPassword, setAccountPassword] = useState("");
   const [accountEsistente, setAccountEsistente] = useState(null); // null = ancora in caricamento (solo modalita' locale)
   const [erroreLogin, setErroreLogin] = useState(null);
+  const [mostraPassword, setMostraPassword] = useState(false);
+  const [mostraPasswordRecupero, setMostraPasswordRecupero] = useState(false);
   const [caricandoAccount, setCaricandoAccount] = useState(true);
   const [authToken, setAuthToken] = useState(null); // presente solo in modalita' backend online
   const [firebaseUid, setFirebaseUid] = useState(null); // presente solo in modalita' Firebase
@@ -2255,7 +2261,10 @@ export default function MindbiteApp() {
                 </div>
                 <div className="kn-field">
                   <label className="kn-label">Password</label>
-                  <input className="kn-input" type="password" placeholder="••••••••" value={accountPassword} onChange={(e) => { setAccountPassword(e.target.value); setErroreLogin(null); }} />
+                  <div className="kn-pwd-wrap">
+                    <input className="kn-input" type={mostraPassword ? "text" : "password"} placeholder="••••••••" value={accountPassword} onChange={(e) => { setAccountPassword(e.target.value); setErroreLogin(null); }} />
+                    <button type="button" className="kn-pwd-toggle" onClick={() => setMostraPassword((v) => !v)} title={mostraPassword ? "Nascondi password" : "Mostra password"}>{mostraPassword ? "🙈" : "👁️"}</button>
+                  </div>
                 </div>
                 {erroreLogin && <p className="kn-error" style={{ marginTop: 0 }}>{erroreLogin}</p>}
                 <button className="kn-btn" onClick={accedi}>Accedi</button>
@@ -2282,7 +2291,10 @@ export default function MindbiteApp() {
             </div>
             <div className="kn-field">
               <label className="kn-label">Password</label>
-              <input className="kn-input" type="password" placeholder="••••••••" value={accountPassword} onChange={(e) => { setAccountPassword(e.target.value); setErroreLogin(null); }} />
+              <div className="kn-pwd-wrap">
+                <input className="kn-input" type={mostraPassword ? "text" : "password"} placeholder="••••••••" value={accountPassword} onChange={(e) => { setAccountPassword(e.target.value); setErroreLogin(null); }} />
+                <button type="button" className="kn-pwd-toggle" onClick={() => setMostraPassword((v) => !v)} title={mostraPassword ? "Nascondi password" : "Mostra password"}>{mostraPassword ? "🙈" : "👁️"}</button>
+              </div>
             </div>
             {erroreLogin && <p className="kn-error" style={{ marginTop: 0 }}>{erroreLogin}</p>}
             {accountEsistente && (
@@ -2341,7 +2353,10 @@ export default function MindbiteApp() {
                     </div>
                     <div className="kn-field">
                       <label className="kn-label">Nuova password</label>
-                      <input className="kn-input" type="password" placeholder="••••••••" value={recuperaNuovaPassword} onChange={(e) => { setRecuperaNuovaPassword(e.target.value); setRecuperaErrore(null); }} />
+                      <div className="kn-pwd-wrap">
+                        <input className="kn-input" type={mostraPasswordRecupero ? "text" : "password"} placeholder="••••••••" value={recuperaNuovaPassword} onChange={(e) => { setRecuperaNuovaPassword(e.target.value); setRecuperaErrore(null); }} />
+                        <button type="button" className="kn-pwd-toggle" onClick={() => setMostraPasswordRecupero((v) => !v)} title={mostraPasswordRecupero ? "Nascondi password" : "Mostra password"}>{mostraPasswordRecupero ? "🙈" : "👁️"}</button>
+                      </div>
                     </div>
                     {recuperaErrore && <p className="kn-error" style={{ marginTop: 0 }}>{recuperaErrore}</p>}
                     <button className="kn-btn" onClick={confermaNuovaPassword}>Reimposta password</button>

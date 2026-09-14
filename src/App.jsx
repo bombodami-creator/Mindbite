@@ -590,12 +590,9 @@ const DB_ALIMENTI = [
 ];
 
 const PASTI_OGGI_INIT = {
-  Colazione: [{ nome: "Yogurt greco + cracker integrali", kcal: 220 }],
-  Pranzo: [
-    { nome: "Pasta al pomodoro (80g)", kcal: 420 },
-    { nome: "Insalata mista", kcal: 60 },
-  ],
-  Merenda: [{ nome: "Barretta proteica", kcal: 180 }],
+  Colazione: [],
+  Pranzo: [],
+  Merenda: [],
   Cena: [],
 };
 
@@ -1460,10 +1457,8 @@ export default function MindbiteApp() {
   }
 
   // --- Community ---
-  const [codice, setCodice] = useState("KEY-7F2QX9");
-  const [contatti, setContatti] = useState([
-    { id: 1, nome: "Marco Bombonato", connessoIl: "12 ago 2026", stato: "connesso", kcalResiduiStimati: 1450 },
-  ]);
+  const [codice, setCodice] = useState(() => generaCodice());
+  const [contatti, setContatti] = useState([]);
   const [toastCommunity, setToastCommunity] = useState("");
   const [proposteMie, setProposteMie] = useState([]);
   const [caricandoProposte, setCaricandoProposte] = useState(false);

@@ -2284,7 +2284,11 @@ export default function MindbiteApp() {
           <>
             <button className="kn-back-link" onClick={() => setScreen("login")}>‹ torna al login</button>
             <h1 className="kn-h1">Crea il tuo account</h1>
-            <p className="kn-sub">Email e password restano su questo dispositivo — usale per accedere di nuovo senza rifare l'onboarding.</p>
+            <p className="kn-sub">
+              {FIREBASE_CONFIG
+                ? "I tuoi dati sono sincronizzati online: accedi da qualsiasi dispositivo con la stessa email e password."
+                : "Email e password restano su questo dispositivo — usale per accedere di nuovo senza rifare l'onboarding."}
+            </p>
             <div className="kn-field">
               <label className="kn-label">Email</label>
               <input className="kn-input" type="email" placeholder="nome@esempio.it" value={accountEmail} onChange={(e) => { setAccountEmail(e.target.value); setErroreLogin(null); }} />

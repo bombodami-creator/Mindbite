@@ -632,7 +632,7 @@ async function chiediAClaude(content, maxTokens = 1000) {
   const endpoint = usaBackend ? FATSECRET_API_BASE + "/api/claude" : "https://api.anthropic.com/v1/messages";
   const corpo = usaBackend
     ? { content, maxTokens }
-    : { model: "claude-sonnet-4-6", max_tokens: maxTokens, messages: [{ role: "user", content }] };
+    : { model: "claude-sonnet-5", max_tokens: maxTokens, messages: [{ role: "user", content }] };
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

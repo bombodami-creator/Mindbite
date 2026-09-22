@@ -266,7 +266,13 @@ async function chiediAllAI(env, content, maxTokens) {
 
   var corpo = JSON.stringify({
     contents: [{ role: "user", parts: convertiContentPerGemini(content) }],
-    generationConfig: { maxOutputTokens: maxTokens || 1000 }
+    // responseMimeType forza Gemini a restituire JSON valido e nient'altro:
+    // a differenza di Claude, Gemini non segue sempre alla lettera
+    // l'istruzione "rispondi SOLO con JSON" scritta nei prompt del client
+    // (src/App.jsx), e un minimo di testo in piu' fa fallire il JSON.parse
+    // lato client senza che il Worker se ne accorga (la chiamata a Gemini
+    // e' comunque andata a buon fine).
+    generationConfig: { maxOutputTokens: maxTokens || 1000, responseMimeType: "application/json" }
   });
 
   // Gemini a volte risponde con un errore transitorio ("alta domanda,

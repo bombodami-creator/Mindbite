@@ -2718,9 +2718,9 @@ export default function MindbiteApp() {
                 </div>
               </div>
 
-              {vistaOggi && (
+              {tuttiGliAlimenti.length > 0 && (
                 <>
-                  <p className="kn-sub" style={{ marginBottom: 8 }}>Quanto pesa ciascun macro su quello che hai mangiato finora oggi.</p>
+                  <p className="kn-sub" style={{ marginBottom: 8 }}>Quanto pesa ciascun macro su quello che hai mangiato {vistaOggi ? "finora oggi" : "quel giorno"}.</p>
                   <div className="kn-mini-macros-card">
                   <div className="kn-mini-macro">
                     <div className="kn-mini-macro-top"><span>Carbo</span></div>

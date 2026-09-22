@@ -31,7 +31,7 @@ var FATSECRET_REST_URL = "https://platform.fatsecret.com/rest/server.api";
 // attuale da https://ai.google.dev/gemini-api/docs/models (deve supportare
 // testo + immagini). Se il Worker inizia a fallire con un errore tipo
 // "modello non trovato" nei log, e' quasi certamente questa riga.
-var GEMINI_MODEL = "gemini-3.6-flash";
+var GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 function percentEncode(str) {
   return encodeURIComponent(str).replace(/[!*'()]/g, function (c) {

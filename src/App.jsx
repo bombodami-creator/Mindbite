@@ -416,12 +416,16 @@ const STYLE = `
 .kn-meal-add-link { background: none; border: none; color: var(--accent); font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 8px 0 0; }
 `;
 
+// Coefficienti di attivita' fisica (PA) della formula EER (Estimated Energy
+// Requirement, Institute of Medicine 2002/2005), diversi per uomo/donna.
+// Lo standard EER definisce 4 categorie (non 5 come il vecchio fattore
+// Mifflin-St Jeor): chi aveva scelto la vecchia quinta categoria
+// "molto_intenso" viene fatto rientrare in "intenso" (vedi caricaProfiloInStato).
 const ATTIVITA = [
-  { id: "sedentario", nome: "Sedentario", desc: "Poco o nessun esercizio, lavoro d'ufficio o comunque non fisico.", fattore: 1.2 },
-  { id: "leggero", nome: "Leggermente attivo", desc: "Esercizio leggero 1-3 giorni a settimana, o camminate regolari.", fattore: 1.375 },
-  { id: "moderato", nome: "Moderatamente attivo", desc: "Esercizio moderato 3-5 giorni a settimana.", fattore: 1.55 },
-  { id: "intenso", nome: "Molto attivo", desc: "Esercizio intenso 6-7 giorni a settimana.", fattore: 1.725 },
-  { id: "molto_intenso", nome: "Estremamente attivo", desc: "Lavoro fisico pesante o doppi allenamenti quotidiani.", fattore: 1.9 },
+  { id: "sedentario", nome: "Sedentario", desc: "Poco o nessun esercizio, lavoro d'ufficio o comunque non fisico.", pa: { uomo: 1.0, donna: 1.0 } },
+  { id: "leggero", nome: "Poco attivo", desc: "Vita quotidiana normale piu' circa 30-60 minuti al giorno di camminata o movimento leggero.", pa: { uomo: 1.11, donna: 1.12 } },
+  { id: "moderato", nome: "Attivo", desc: "Vita quotidiana normale piu' almeno 60 minuti al giorno di attivita' fisica moderata.", pa: { uomo: 1.25, donna: 1.27 } },
+  { id: "intenso", nome: "Molto attivo", desc: "Vita quotidiana normale piu' almeno 60 minuti di attivita' moderata e altri 60 minuti di attivita' intensa, o lavoro fisicamente pesante.", pa: { uomo: 1.48, donna: 1.45 } },
 ];
 
 const OBIETTIVI = [
@@ -973,7 +977,10 @@ export default function MindbiteApp() {
     setPeso(p.peso || "");
     setAltezza(p.altezza || "");
     setPesoObiettivo(p.pesoObiettivo || "");
-    setAttivita(p.attivita || null);
+    // "molto_intenso" era la quinta categoria della vecchia formula (Mifflin-St
+    // Jeor + fattore): lo standard EER ne definisce solo 4, quindi chi l'aveva
+    // scelta viene fatto rientrare nella piu' alta rimasta, "intenso".
+    setAttivita(p.attivita === "molto_intenso" ? "intenso" : p.attivita || null);
     setObiettivo(p.obiettivo || null);
     setRitmo(p.ritmo != null ? p.ritmo : 0.5);
     setCarbP(p.carbP != null ? p.carbP : 40);
@@ -2116,14 +2123,27 @@ export default function MindbiteApp() {
     const a = parseFloat(eta) || 0;
     if (!p || !h || !a || !attivita) return null;
 
+    // EER (Estimated Energy Requirement, IOM 2002/2005): stima il fabbisogno
+    // energetico totale direttamente da sesso/eta'/peso/altezza/attivita',
+    // senza passare da un metabolismo basale moltiplicato per un fattore
+    // fisso come la vecchia formula Mifflin-St Jeor + fattore di attivita'.
+    const attivitaValida = ATTIVITA.find((x) => x.id === attivita) || ATTIVITA[ATTIVITA.length - 1];
+    const pa = attivitaValida.pa[sesso];
+    const altezzaM = h / 100;
+    const eer =
+      sesso === "uomo"
+        ? 662 - 9.53 * a + pa * (15.91 * p + 539.6 * altezzaM)
+        : 354 - 6.91 * a + pa * (9.36 * p + 726 * altezzaM);
+
+    // Mifflin-St Jeor resta solo come stima informativa del metabolismo
+    // basale mostrata nel risultato: non entra piu' nel calcolo del target,
+    // che ora usa l'EER qui sopra.
     const bmr = sesso === "uomo" ? 10 * p + 6.25 * h - 5 * a + 5 : 10 * p + 6.25 * h - 5 * a - 161;
-    const fattore = ATTIVITA.find((x) => x.id === attivita).fattore;
-    const tdee = bmr * fattore;
 
     const deltaGiornaliero = (ritmo * 7700) / 7;
-    let target = tdee;
-    if (obiettivo === "perdita") target = tdee - deltaGiornaliero;
-    if (obiettivo === "aumento") target = tdee + deltaGiornaliero;
+    let target = eer;
+    if (obiettivo === "perdita") target = eer - deltaGiornaliero;
+    if (obiettivo === "aumento") target = eer + deltaGiornaliero;
 
     const minSicurezza = sesso === "uomo" ? 1500 : 1200;
     const targetSicuro = Math.max(target, minSicurezza);
@@ -2134,7 +2154,7 @@ export default function MindbiteApp() {
 
     return {
       bmr: Math.round(bmr),
-      tdee: Math.round(tdee),
+      tdee: Math.round(eer),
       target: Math.round(targetSicuro),
       sottoMinimo: target < minSicurezza,
       carbG: Math.round(carbG),
@@ -2412,7 +2432,7 @@ export default function MindbiteApp() {
           <>
             <h1 className="kn-h1">Come viene calcolato</h1>
             <p className="kn-sub">
-              Il fabbisogno calorico è stimato con la formula di Mifflin-St Jeor, il metodo attualmente più accurato e riconosciuto in ambito nutrizionale per il calcolo del metabolismo basale, applicato in base a sesso, età, peso e altezza. La ripartizione dei macronutrienti segue i range raccomandati da SINU/LARN ed EFSA.
+              Il fabbisogno calorico è stimato con la formula EER (Estimated Energy Requirement, Institute of Medicine), che calcola il consumo energetico totale giornaliero direttamente da sesso, età, peso, altezza e livello di attività. Il metabolismo basale mostrato accanto è una stima informativa separata (formula di Mifflin-St Jeor). La ripartizione dei macronutrienti segue i range raccomandati da SINU/LARN ed EFSA.
             </p>
             <p className="kn-sub">
               Valido per soggetti adulti sani, non in gravidanza/allattamento e non atleti agonisti. È una stima statistica (margine d'errore tipico ±10%), non una misurazione clinica individuale: non sostituisce il parere di un medico o nutrizionista.
@@ -2441,7 +2461,7 @@ export default function MindbiteApp() {
           <>
             <StepTabs current={1} />
             <h1 className="kn-h1">I tuoi dati</h1>
-            <p className="kn-sub">Servono per calcolare il tuo fabbisogno calorico con la formula di Mifflin-St Jeor.</p>
+            <p className="kn-sub">Servono per calcolare il tuo fabbisogno calorico con la formula EER (Estimated Energy Requirement).</p>
             <div className="kn-field">
               <label className="kn-label">Nome</label>
               <input className="kn-input" type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="es. Damiano" />
@@ -3839,7 +3859,7 @@ export default function MindbiteApp() {
         )}
 
       </div>
-      <p className="kn-credit">Stima statistica (Mifflin-St Jeor, ±10%): non sostituisce il parere di un medico o nutrizionista.</p>
+      <p className="kn-credit">Stima statistica (EER, ±10%): non sostituisce il parere di un medico o nutrizionista.</p>
     </div>
   );
 }

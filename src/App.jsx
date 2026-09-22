@@ -447,6 +447,22 @@ const OBIETTIVI = [
   { id: "aumento", nome: "Aumentare la massa", desc: "Surplus calorico moderato per crescita muscolare." },
 ];
 
+// Ripartizione macro automatica per obiettivo, entro i range raccomandati da
+// SINU/LARN ed EFSA (carboidrati 45-60%, grassi 20-35%): proteine leggermente
+// piu' alte della soglia LARN classica in perdita/aumento, in linea con le
+// linee guida pratiche per preservare/costruire massa magra. Non piu'
+// regolabile manualmente dall'utente: si aggiorna da sola in base all'obiettivo.
+const RIPARTIZIONE_MACRO_PER_OBIETTIVO = {
+  perdita: { carbP: 40, fatP: 30 },
+  mantenimento: { carbP: 50, fatP: 30 },
+  aumento: { carbP: 50, fatP: 25 },
+};
+
+function ripartizioneMacroDaObiettivo(obiettivo) {
+  const r = RIPARTIZIONE_MACRO_PER_OBIETTIVO[obiettivo] || RIPARTIZIONE_MACRO_PER_OBIETTIVO.mantenimento;
+  return { carbP: r.carbP, fatP: r.fatP, proteinP: 100 - r.carbP - r.fatP };
+}
+
 const GIORNI_SETTIMANA = ["L", "M", "M", "G", "V", "S", "D"];
 const MESI = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
 
@@ -979,7 +995,7 @@ export default function MindbiteApp() {
       password: accountPassword,
       nome,
       sesso, eta, peso, altezza, pesoObiettivo,
-      attivita, obiettivo, ritmo, carbP, fatP,
+      attivita, obiettivo, ritmo,
       tema,
       metodoConfermato: letturaMetodoConfermata,
       metodoConfermatoData,
@@ -1008,8 +1024,6 @@ export default function MindbiteApp() {
     setAttivita(p.attivita === "molto_intenso" ? "intenso" : p.attivita || null);
     setObiettivo(p.obiettivo || null);
     setRitmo(p.ritmo != null ? p.ritmo : 0.5);
-    setCarbP(p.carbP != null ? p.carbP : 40);
-    setFatP(p.fatP != null ? p.fatP : 30);
     setTema(p.tema || "chiaro");
     setLetturaMetodoConfermata(!!p.metodoConfermato);
     setMetodoConfermatoData(p.metodoConfermatoData || null);
@@ -1261,9 +1275,7 @@ export default function MindbiteApp() {
   const [obiettivo, setObiettivo] = useState(null);
   const [ritmo, setRitmo] = useState(0.5);
 
-  const [carbP, setCarbP] = useState(40);
-  const [fatP, setFatP] = useState(40);
-  const proteinP = Math.max(10, 100 - carbP - fatP);
+  const { carbP, fatP, proteinP } = useMemo(() => ripartizioneMacroDaObiettivo(obiettivo), [obiettivo]);
 
   const oggi = new Date();
   const [selectedDay, setSelectedDay] = useState(oggi.getDate());
@@ -2577,15 +2589,7 @@ export default function MindbiteApp() {
               <div className="kn-stat"><div className="kn-stat-val">{calc.tdee}</div><div className="kn-stat-lbl">consumo di mantenimento</div></div>
             </div>
             <h1 className="kn-h1" style={{ fontSize: 19 }}>Macronutrienti</h1>
-            <p className="kn-sub" style={{ marginBottom: 16 }}>Puoi regolare la ripartizione, il calcolo si aggiorna subito.</p>
-            <div className="kn-slider-row">
-              <div className="kn-slider-label"><span>Carboidrati</span><span>{carbP}%</span></div>
-              <input className="kn-slider" type="range" min="15" max="65" value={carbP} onChange={(e) => setCarbP(parseInt(e.target.value))} />
-            </div>
-            <div className="kn-slider-row">
-              <div className="kn-slider-label"><span>Grassi</span><span>{fatP}%</span></div>
-              <input className="kn-slider" type="range" min="15" max="55" value={fatP} onChange={(e) => setFatP(parseInt(e.target.value))} />
-            </div>
+            <p className="kn-sub" style={{ marginBottom: 16 }}>Ripartizione calcolata automaticamente in base al tuo obiettivo.</p>
             <div className="kn-macro-row">
               <div className="kn-macro-top"><span className="kn-macro-name">Carboidrati</span><span className="kn-macro-pct-primary">{carbP}% <span className="kn-macro-grams-light">({calc.carbG} g)</span></span></div>
               <div className="kn-macro-bar-track"><div className="kn-macro-bar-fill" style={{ width: carbP + "%", background: "linear-gradient(90deg, var(--carb), #F7B267)" }} /></div>
@@ -2999,13 +3003,18 @@ export default function MindbiteApp() {
 
             <div className="kn-profile-section">
               <div className="kn-profile-heading">Ripartizione macro</div>
-              <div className="kn-slider-row">
-                <div className="kn-slider-label"><span>Carboidrati</span><span>{carbP}%</span></div>
-                <input className="kn-slider" type="range" min="15" max="65" value={carbP} onChange={(e) => segna(setCarbP)(parseInt(e.target.value))} />
+              <p className="kn-sub" style={{ marginTop: -6, marginBottom: 14 }}>Calcolata automaticamente in base al tuo obiettivo.</p>
+              <div className="kn-macro-row">
+                <div className="kn-macro-top"><span className="kn-macro-name">Carboidrati</span><span className="kn-macro-pct-primary">{carbP}% <span className="kn-macro-grams-light">({calc ? calc.carbG : "—"} g)</span></span></div>
+                <div className="kn-macro-bar-track"><div className="kn-macro-bar-fill" style={{ width: carbP + "%", background: "linear-gradient(90deg, var(--carb), #F7B267)" }} /></div>
               </div>
-              <div className="kn-slider-row" style={{ marginBottom: 4 }}>
-                <div className="kn-slider-label"><span>Grassi</span><span>{fatP}%</span></div>
-                <input className="kn-slider" type="range" min="15" max="55" value={fatP} onChange={(e) => segna(setFatP)(parseInt(e.target.value))} />
+              <div className="kn-macro-row">
+                <div className="kn-macro-top"><span className="kn-macro-name">Grassi</span><span className="kn-macro-pct-primary">{fatP}% <span className="kn-macro-grams-light">({calc ? calc.fatG : "—"} g)</span></span></div>
+                <div className="kn-macro-bar-track"><div className="kn-macro-bar-fill" style={{ width: fatP + "%", background: "linear-gradient(90deg, var(--fat), #F4D06F)" }} /></div>
+              </div>
+              <div className="kn-macro-row" style={{ marginBottom: 0 }}>
+                <div className="kn-macro-top"><span className="kn-macro-name">Proteine</span><span className="kn-macro-pct-primary">{proteinP}% <span className="kn-macro-grams-light">({calc ? calc.proteinG : "—"} g)</span></span></div>
+                <div className="kn-macro-bar-track"><div className="kn-macro-bar-fill" style={{ width: proteinP + "%", background: "linear-gradient(90deg, var(--protein), #7ADFFF)" }} /></div>
               </div>
             </div>
 

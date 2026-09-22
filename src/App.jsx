@@ -2725,19 +2725,19 @@ export default function MindbiteApp() {
                   <div className="kn-mini-macro">
                     <div className="kn-mini-macro-top"><span>Carbo</span></div>
                     <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{carboPctComposizione}%</b>
-                    <span className="kn-macro-grams-light">{arrotondaG(carboAssuntiG)}g · obiettivo {calc ? calc.carbG : "—"}g</span>
+                    <span className="kn-macro-grams-light">{arrotondaG(carboAssuntiG)}g / {calc ? calc.carbG : "—"}g</span>
                     <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: carboPctComposizione + "%", background: "linear-gradient(90deg, var(--carb), #F7B267)" }} /></div>
                   </div>
                   <div className="kn-mini-macro">
                     <div className="kn-mini-macro-top"><span>Grassi</span></div>
                     <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{grassiPctComposizione}%</b>
-                    <span className="kn-macro-grams-light">{arrotondaG(grassiAssuntiG)}g · obiettivo {calc ? calc.fatG : "—"}g</span>
+                    <span className="kn-macro-grams-light">{arrotondaG(grassiAssuntiG)}g / {calc ? calc.fatG : "—"}g</span>
                     <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: grassiPctComposizione + "%", background: "linear-gradient(90deg, var(--fat), #F4D06F)" }} /></div>
                   </div>
                   <div className="kn-mini-macro">
                     <div className="kn-mini-macro-top"><span>Proteine</span></div>
                     <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{proteinePctComposizione}%</b>
-                    <span className="kn-macro-grams-light">{arrotondaG(proteineAssunteG)}g · obiettivo {calc ? calc.proteinG : "—"}g</span>
+                    <span className="kn-macro-grams-light">{arrotondaG(proteineAssunteG)}g / {calc ? calc.proteinG : "—"}g</span>
                     <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: proteinePctComposizione + "%", background: "linear-gradient(90deg, var(--protein), #7ADFFF)" }} /></div>
                   </div>
                   </div>

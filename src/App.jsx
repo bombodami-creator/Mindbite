@@ -793,7 +793,88 @@ function KcalRing({ pct, kcal, target, light }) {
   );
 }
 
-const ICONE_PASTO = { Colazione: "🥐", Pranzo: "🍝", Merenda: "🍎", Cena: "🍽️" };
+// Icone di navbar e pasti: linee sottili monocrome (stroke="currentColor",
+// ereditano il colore dal contenitore, cosi' lo stato attivo/inattivo delle
+// tab di navbar funziona senza altro codice) invece delle emoji.
+function IconaHome(props) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M4 11.5 12 4l8 7.5" />
+      <path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9" />
+    </svg>
+  );
+}
+function IconaCalendario(props) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="4" y="5" width="16" height="15" rx="3" />
+      <path d="M4 10h16" />
+      <path d="M8 3v4M16 3v4" />
+    </svg>
+  );
+}
+function IconaFotocamera(props) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M9 5l1.2-1.5a1 1 0 0 1 .8-.5h2a1 1 0 0 1 .8.5L15 5h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3Z" />
+      <circle cx="12" cy="13" r="3.3" />
+    </svg>
+  );
+}
+function IconaCommunity(props) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="8.5" cy="9" r="3" />
+      <path d="M3 19c0-3.3 2.5-6 5.5-6s5.5 2.7 5.5 6" />
+      <circle cx="16.5" cy="8" r="2.3" />
+      <path d="M13.3 19c.2-2.6 2-4.6 4.3-4.6" opacity="0.55" />
+    </svg>
+  );
+}
+function IconaAltro(props) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="4" y1="7" x2="20" y2="7" /><circle cx="9" cy="7" r="1.8" fill="var(--shell-bg)" />
+      <line x1="4" y1="12" x2="20" y2="12" /><circle cx="15" cy="12" r="1.8" fill="var(--shell-bg)" />
+      <line x1="4" y1="17" x2="20" y2="17" /><circle cx="11" cy="17" r="1.8" fill="var(--shell-bg)" />
+    </svg>
+  );
+}
+function IconaColazione(props) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M4 15h16" />
+      <path d="M6 15a6 6 0 0 1 12 0" />
+      <path d="M12 6v3M6.5 9.5l1.8 1.8M17.5 9.5l-1.8 1.8" />
+    </svg>
+  );
+}
+function IconaPranzo(props) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M7 3v8M5 3v5a2 2 0 0 0 2 2 2 2 0 0 0 2-2V3M7 11v10" />
+      <path d="M17 3c-1.6 0-2.5 1.6-2.5 4.2S15.4 11 17 11v10" />
+    </svg>
+  );
+}
+function IconaMerenda(props) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M6 18C4 12 8 5 18 4c1 8-4 13-12 14Z" />
+      <path d="M7 17c3-3 6-6 9-11" opacity="0.55" />
+    </svg>
+  );
+}
+function IconaCena(props) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M16 3a7 7 0 1 0 5 11.9A7 7 0 0 1 16 3Z" />
+      <path d="M19.2 5.5l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5Z" opacity="0.8" />
+    </svg>
+  );
+}
+
+const ICONE_PASTO = { Colazione: IconaColazione, Pranzo: IconaPranzo, Merenda: IconaMerenda, Cena: IconaCena };
 
 function pastoSuggeritoOra(ora) {
   const h = ora != null ? ora : new Date().getHours();
@@ -829,17 +910,17 @@ function Navbar({ screen, setScreen, onCommunity, onFoto, onOggi }) {
   return (
     <div className="kn-navbar">
       <div className={"kn-navbar-tab" + (screen === "diario" ? " active" : "")} onClick={onOggi}>
-        <div style={{ fontSize: 17 }}>🏠</div>Oggi
+        <IconaHome />Oggi
       </div>
       <div className={"kn-navbar-tab" + (screen === "calendario" ? " active" : "")} onClick={() => setScreen("calendario")}>
-        <div style={{ fontSize: 17 }}>📅</div>Calendario
+        <IconaCalendario />Calendario
       </div>
-      <div className="kn-navbar-fab" onClick={onFoto}>📷</div>
+      <div className="kn-navbar-fab" onClick={onFoto}><IconaFotocamera stroke="var(--btn-text)" /></div>
       <div className={"kn-navbar-tab" + (screen === "community" ? " active" : "")} onClick={() => { setScreen("community"); onCommunity && onCommunity(); }}>
-        <div style={{ fontSize: 17 }}>👥</div>Community
+        <IconaCommunity />Community
       </div>
       <div className={"kn-navbar-tab" + (screen === "profilo" ? " active" : "")} onClick={() => setScreen("profilo")}>
-        <div style={{ fontSize: 17 }}>⚙️</div>Altro
+        <IconaAltro />Altro
       </div>
     </div>
   );
@@ -2758,6 +2839,7 @@ export default function MindbiteApp() {
                   const tot = items.reduce((s, it) => s + it.kcal, 0);
                   const vuoto = items.length === 0;
                   const espansoPasto = !!pastiEspansi[nome];
+                  const IconaPasto = ICONE_PASTO[nome] || IconaPranzo;
                   return (
                     <React.Fragment key={nome}>
                       <div
@@ -2765,7 +2847,7 @@ export default function MindbiteApp() {
                         style={!vistaOggi && vuoto ? { cursor: "default" } : undefined}
                         onClick={() => { if (vistaOggi || !vuoto) togglePastoEspanso(nome); }}
                       >
-                        <span className="kn-meal-icon">{ICONE_PASTO[nome] || "🍴"}</span>
+                        <span className="kn-meal-icon"><IconaPasto /></span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div className="kn-meal-row-name">{nome}</div>
                           <div className="kn-meal-row-sub">{vuoto ? (vistaOggi ? "Tocca per aggiungere" : "Nessuna registrazione") : `${items.length} ${items.length > 1 ? "alimenti" : "alimento"}`}</div>

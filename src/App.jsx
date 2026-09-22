@@ -652,6 +652,25 @@ function generaCodiceTemporaneo() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+// Chiave data in formato YYYY-MM-DD nel fuso orario LOCALE dell'utente, non
+// UTC: date.toISOString() converte prima in UTC, quindi tra mezzanotte e le
+// 1-2 di notte locali (a seconda del fuso) il giorno UTC e' ancora quello di
+// ieri. Usare toISOString() per le chiavi del diario causava pasti registrati
+// in quella finestra a finire salvati sotto la data sbagliata.
+function chiaveData(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+// Arrotonda un valore in grammi di un macro a un numero intero (mai decimali
+// in UI: fanno solo confusione), lasciando passare invariati null/undefined
+// (usati per "dato mancante", diverso da 0).
+function arrotondaG(valore) {
+  return valore == null ? valore : Math.round(valore);
+}
+
 // Punto unico per tutte le chiamate a Claude (riconoscimento foto, Consiglia,
 // Assistente, consigli dispensa): centralizza endpoint, modello e il
 // parsing della risposta (che arriva sempre come testo JSON, a volte
@@ -1292,8 +1311,13 @@ export default function MindbiteApp() {
   const [storicoDiario, setStoricoDiario] = useState({}); // { "YYYY-MM-DD": kcalTotali }
 
   function chiaveGiorno(date) {
-    return "diario:" + date.toISOString().slice(0, 10);
+    return "diario:" + chiaveData(date);
   }
+
+  // Data (chiave YYYY-MM-DD locale) per cui pastiOggi e' effettivamente
+  // caricato/salvato: serve per accorgersi che e' scattata la mezzanotte
+  // mentre l'app restava aperta (vedi effetto piu' sotto).
+  const [giornoCaricato, setGiornoCaricato] = useState(null);
 
   useEffect(() => {
     if (caricandoAccount) return; // aspetta che window.storage sia quello giusto (Firestore/backend/locale)
@@ -1304,6 +1328,7 @@ export default function MindbiteApp() {
       } catch (e) {
         /* nessun dato salvato per oggi ancora: resta il vuoto di default */
       }
+      setGiornoCaricato(chiaveData(oggi));
       setPastiCaricati(true);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1317,6 +1342,28 @@ export default function MindbiteApp() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pastiOggi, pastiCaricati]);
+
+  // Se l'app resta aperta a cavallo di mezzanotte, "oggi" (ricalcolato ad
+  // ogni render) cambia da solo, ma pastiOggi in memoria no: senza questo
+  // controllo, il primo pasto registrato il giorno dopo si sommava a quelli
+  // di ieri invece di iniziare un diario vuoto. Controlliamo sia a intervalli
+  // sia quando la scheda torna in primo piano (il caso piu' comune: l'utente
+  // riapre l'app il giorno dopo dalla stessa scheda/PWA mai chiusa).
+  useEffect(() => {
+    function controllaCambioGiorno() {
+      const chiaveOra = chiaveData(new Date());
+      if (giornoCaricato && chiaveOra !== giornoCaricato) {
+        setPastiOggi(JSON.parse(JSON.stringify(PASTI_OGGI_INIT)));
+        setGiornoCaricato(chiaveOra);
+      }
+    }
+    const intervallo = setInterval(controllaCambioGiorno, 60000);
+    document.addEventListener("visibilitychange", controllaCambioGiorno);
+    return () => {
+      clearInterval(intervallo);
+      document.removeEventListener("visibilitychange", controllaCambioGiorno);
+    };
+  }, [giornoCaricato]);
 
   async function caricaStoricoDiario() {
     try {
@@ -1474,9 +1521,9 @@ export default function MindbiteApp() {
     if (!unitaScelta) return { kcal: 0, carb: 0, fat: 0, protein: 0 };
     return {
       kcal: Math.round(unitaScelta.kcalUnit * quantitaScelta),
-      carb: Math.round(unitaScelta.carbUnit * quantitaScelta * 10) / 10,
-      fat: Math.round(unitaScelta.fatUnit * quantitaScelta * 10) / 10,
-      protein: Math.round(unitaScelta.proteinUnit * quantitaScelta * 10) / 10,
+      carb: Math.round(unitaScelta.carbUnit * quantitaScelta),
+      fat: Math.round(unitaScelta.fatUnit * quantitaScelta),
+      protein: Math.round(unitaScelta.proteinUnit * quantitaScelta),
     };
   }
   function aggiungiDaElenco() {
@@ -1689,7 +1736,7 @@ export default function MindbiteApp() {
     const valore = parseFloat(nuovoPesoValore);
     if (!valore || valore <= 0) return;
     const voce = {
-      data: new Date().toISOString().slice(0, 10),
+      data: chiaveData(new Date()),
       peso: valore,
       vita: nuovaVita ? parseFloat(nuovaVita) : null,
       collo: nuovoCollo ? parseFloat(nuovoCollo) : null,
@@ -1731,7 +1778,7 @@ export default function MindbiteApp() {
     const p2 = ordinati[ordinati.length - 1];
     const giorni = Math.max(1, Math.round((new Date(p2.data) - new Date(p1.data)) / 86400000));
     const target = (calc && calc.target) || 2100;
-    const oggiChiave = oggi.toISOString().slice(0, 10);
+    const oggiChiave = chiaveData(oggi);
 
     let sommaDeficit = 0;
     let giorniConDati = 0;
@@ -1739,7 +1786,7 @@ export default function MindbiteApp() {
     for (let i = 1; i <= giorni; i++) {
       const d = new Date(d1);
       d.setDate(d1.getDate() + i);
-      const chiave = d.toISOString().slice(0, 10);
+      const chiave = chiaveData(d);
       let kcalGiorno = null;
       if (chiave === oggiChiave) kcalGiorno = Object.values(pastiOggi).flat().reduce((s, it) => s + it.kcal, 0);
       else if (storicoDiario[chiave] != null) kcalGiorno = storicoDiario[chiave];
@@ -1931,7 +1978,7 @@ export default function MindbiteApp() {
     const target = (calc && calc.target) || 2100;
     const ieri = new Date(oggi);
     ieri.setDate(oggi.getDate() - 1);
-    const chiaveIeri = ieri.toISOString().slice(0, 10);
+    const chiaveIeri = chiaveData(ieri);
     const kcalIeri = storicoDiario[chiaveIeri];
     if (kcalIeri == null) return null;
     const sogliaAlto = target * 1.08;
@@ -2208,7 +2255,7 @@ export default function MindbiteApp() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(oggi);
       d.setDate(oggi.getDate() - i);
-      const chiave = d.toISOString().slice(0, 10);
+      const chiave = chiaveData(d);
       const kcal = i === 0 ? consumatoOggi : (storicoDiario[chiave] || 0);
       const haDato = i === 0 ? consumatoOggi > 0 : storicoDiario[chiave] != null;
       giorni.push({ label: GIORNI_SETTIMANA[(d.getDay() + 6) % 7], kcal, haDato, oltre: haDato && kcal > target });
@@ -2617,6 +2664,19 @@ export default function MindbiteApp() {
           const carboAssuntiG = tuttiGliAlimenti.reduce((s, i) => s + (i.carboidratiG || 0), 0);
           const grassiAssuntiG = tuttiGliAlimenti.reduce((s, i) => s + (i.grassiG || 0), 0);
           const proteineAssunteG = tuttiGliAlimenti.reduce((s, i) => s + (i.proteineG || 0), 0);
+          // Composizione macro di oggi: non quanto manca al proprio obiettivo
+          // (quello e' gia' il bilancio calorico generale), ma il peso relativo
+          // di ciascun macro sul totale assunto finora, in kcal (non grammi:
+          // altrimenti 1g di grasso, che vale piu' del doppio in kcal di 1g di
+          // carbo/proteine, peserebbe come se fossero equivalenti). Cosi' le tre
+          // barre sommano sempre al 100% e mostrano davvero il rapporto tra loro.
+          const kcalCarboAssunti = carboAssuntiG * 4;
+          const kcalGrassiAssunti = grassiAssuntiG * 9;
+          const kcalProteineAssunte = proteineAssunteG * 4;
+          const kcalMacroAssuntiTotali = kcalCarboAssunti + kcalGrassiAssunti + kcalProteineAssunte;
+          const carboPctComposizione = kcalMacroAssuntiTotali > 0 ? Math.round((kcalCarboAssunti / kcalMacroAssuntiTotali) * 100) : 0;
+          const grassiPctComposizione = kcalMacroAssuntiTotali > 0 ? Math.round((kcalGrassiAssunti / kcalMacroAssuntiTotali) * 100) : 0;
+          const proteinePctComposizione = kcalMacroAssuntiTotali > 0 ? Math.max(0, 100 - carboPctComposizione - grassiPctComposizione) : 0;
 
           if (!vistaOggi && caricandoDettaglioGiorno) {
             return (
@@ -2659,26 +2719,29 @@ export default function MindbiteApp() {
               </div>
 
               {vistaOggi && (
-                <div className="kn-mini-macros-card">
+                <>
+                  <p className="kn-sub" style={{ marginBottom: 8 }}>Quanto pesa ciascun macro su quello che hai mangiato finora oggi.</p>
+                  <div className="kn-mini-macros-card">
                   <div className="kn-mini-macro">
                     <div className="kn-mini-macro-top"><span>Carbo</span></div>
-                    <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{calc ? Math.round((carboAssuntiG / calc.carbG) * 100) : 0}%</b>
-                    <span className="kn-macro-grams-light">{carboAssuntiG}g / {calc ? calc.carbG : "—"}g</span>
-                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: Math.min(100, calc ? (carboAssuntiG / calc.carbG) * 100 : 0) + "%", background: "linear-gradient(90deg, var(--carb), #F7B267)" }} /></div>
+                    <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{carboPctComposizione}%</b>
+                    <span className="kn-macro-grams-light">{arrotondaG(carboAssuntiG)}g · obiettivo {calc ? calc.carbG : "—"}g</span>
+                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: carboPctComposizione + "%", background: "linear-gradient(90deg, var(--carb), #F7B267)" }} /></div>
                   </div>
                   <div className="kn-mini-macro">
                     <div className="kn-mini-macro-top"><span>Grassi</span></div>
-                    <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{calc ? Math.round((grassiAssuntiG / calc.fatG) * 100) : 0}%</b>
-                    <span className="kn-macro-grams-light">{grassiAssuntiG}g / {calc ? calc.fatG : "—"}g</span>
-                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: Math.min(100, calc ? (grassiAssuntiG / calc.fatG) * 100 : 0) + "%", background: "linear-gradient(90deg, var(--fat), #F4D06F)" }} /></div>
+                    <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{grassiPctComposizione}%</b>
+                    <span className="kn-macro-grams-light">{arrotondaG(grassiAssuntiG)}g · obiettivo {calc ? calc.fatG : "—"}g</span>
+                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: grassiPctComposizione + "%", background: "linear-gradient(90deg, var(--fat), #F4D06F)" }} /></div>
                   </div>
                   <div className="kn-mini-macro">
                     <div className="kn-mini-macro-top"><span>Proteine</span></div>
-                    <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{calc ? Math.round((proteineAssunteG / calc.proteinG) * 100) : 0}%</b>
-                    <span className="kn-macro-grams-light">{proteineAssunteG}g / {calc ? calc.proteinG : "—"}g</span>
-                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: Math.min(100, calc ? (proteineAssunteG / calc.proteinG) * 100 : 0) + "%", background: "linear-gradient(90deg, var(--protein), #7ADFFF)" }} /></div>
+                    <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{proteinePctComposizione}%</b>
+                    <span className="kn-macro-grams-light">{arrotondaG(proteineAssunteG)}g · obiettivo {calc ? calc.proteinG : "—"}g</span>
+                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: proteinePctComposizione + "%", background: "linear-gradient(90deg, var(--protein), #7ADFFF)" }} /></div>
                   </div>
-                </div>
+                  </div>
+                </>
               )}
 
               {vistaOggi && (
@@ -2755,7 +2818,7 @@ export default function MindbiteApp() {
                                     ))}
                                     {!haIngredienti && haMacro && (
                                       <div className="kn-meal-item-detail-row">
-                                        <span>Carbo {it.carboidratiG}g · Grassi {it.grassiG}g · Proteine {it.proteineG}g</span>
+                                        <span>Carbo {arrotondaG(it.carboidratiG)}g · Grassi {arrotondaG(it.grassiG)}g · Proteine {arrotondaG(it.proteineG)}g</span>
                                       </div>
                                     )}
                                   </div>
@@ -2819,7 +2882,7 @@ export default function MindbiteApp() {
 
           function kcalPerGiorno(d) {
             const dataObj = new Date(oggi.getFullYear(), oggi.getMonth(), d);
-            const chiave = dataObj.toISOString().slice(0, 10);
+            const chiave = chiaveData(dataObj);
             if (d === oggi.getDate()) return Object.values(pastiOggi).flat().reduce((s, it) => s + it.kcal, 0);
             return storicoDiario[chiave] != null ? storicoDiario[chiave] : null;
           }

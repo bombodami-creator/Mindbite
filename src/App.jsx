@@ -2657,6 +2657,19 @@ export default function MindbiteApp() {
           const carboAssuntiG = tuttiGliAlimenti.reduce((s, i) => s + (i.carboidratiG || 0), 0);
           const grassiAssuntiG = tuttiGliAlimenti.reduce((s, i) => s + (i.grassiG || 0), 0);
           const proteineAssunteG = tuttiGliAlimenti.reduce((s, i) => s + (i.proteineG || 0), 0);
+          // Composizione macro di oggi: non quanto manca al proprio obiettivo
+          // (quello e' gia' il bilancio calorico generale), ma il peso relativo
+          // di ciascun macro sul totale assunto finora, in kcal (non grammi:
+          // altrimenti 1g di grasso, che vale piu' del doppio in kcal di 1g di
+          // carbo/proteine, peserebbe come se fossero equivalenti). Cosi' le tre
+          // barre sommano sempre al 100% e mostrano davvero il rapporto tra loro.
+          const kcalCarboAssunti = carboAssuntiG * 4;
+          const kcalGrassiAssunti = grassiAssuntiG * 9;
+          const kcalProteineAssunte = proteineAssunteG * 4;
+          const kcalMacroAssuntiTotali = kcalCarboAssunti + kcalGrassiAssunti + kcalProteineAssunte;
+          const carboPctComposizione = kcalMacroAssuntiTotali > 0 ? Math.round((kcalCarboAssunti / kcalMacroAssuntiTotali) * 100) : 0;
+          const grassiPctComposizione = kcalMacroAssuntiTotali > 0 ? Math.round((kcalGrassiAssunti / kcalMacroAssuntiTotali) * 100) : 0;
+          const proteinePctComposizione = kcalMacroAssuntiTotali > 0 ? Math.max(0, 100 - carboPctComposizione - grassiPctComposizione) : 0;
 
           if (!vistaOggi && caricandoDettaglioGiorno) {
             return (
@@ -2699,26 +2712,29 @@ export default function MindbiteApp() {
               </div>
 
               {vistaOggi && (
-                <div className="kn-mini-macros-card">
+                <>
+                  <p className="kn-sub" style={{ marginBottom: 8 }}>Quanto pesa ciascun macro su quello che hai mangiato finora oggi.</p>
+                  <div className="kn-mini-macros-card">
                   <div className="kn-mini-macro">
                     <div className="kn-mini-macro-top"><span>Carbo</span></div>
-                    <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{calc ? Math.round((carboAssuntiG / calc.carbG) * 100) : 0}%</b>
-                    <span className="kn-macro-grams-light">{carboAssuntiG}g / {calc ? calc.carbG : "—"}g</span>
-                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: Math.min(100, calc ? (carboAssuntiG / calc.carbG) * 100 : 0) + "%", background: "linear-gradient(90deg, var(--carb), #F7B267)" }} /></div>
+                    <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{carboPctComposizione}%</b>
+                    <span className="kn-macro-grams-light">{carboAssuntiG}g · obiettivo {calc ? calc.carbG : "—"}g</span>
+                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: carboPctComposizione + "%", background: "linear-gradient(90deg, var(--carb), #F7B267)" }} /></div>
                   </div>
                   <div className="kn-mini-macro">
                     <div className="kn-mini-macro-top"><span>Grassi</span></div>
-                    <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{calc ? Math.round((grassiAssuntiG / calc.fatG) * 100) : 0}%</b>
-                    <span className="kn-macro-grams-light">{grassiAssuntiG}g / {calc ? calc.fatG : "—"}g</span>
-                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: Math.min(100, calc ? (grassiAssuntiG / calc.fatG) * 100 : 0) + "%", background: "linear-gradient(90deg, var(--fat), #F4D06F)" }} /></div>
+                    <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{grassiPctComposizione}%</b>
+                    <span className="kn-macro-grams-light">{grassiAssuntiG}g · obiettivo {calc ? calc.fatG : "—"}g</span>
+                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: grassiPctComposizione + "%", background: "linear-gradient(90deg, var(--fat), #F4D06F)" }} /></div>
                   </div>
                   <div className="kn-mini-macro">
                     <div className="kn-mini-macro-top"><span>Proteine</span></div>
-                    <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{calc ? Math.round((proteineAssunteG / calc.proteinG) * 100) : 0}%</b>
-                    <span className="kn-macro-grams-light">{proteineAssunteG}g / {calc ? calc.proteinG : "—"}g</span>
-                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: Math.min(100, calc ? (proteineAssunteG / calc.proteinG) * 100 : 0) + "%", background: "linear-gradient(90deg, var(--protein), #7ADFFF)" }} /></div>
+                    <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{proteinePctComposizione}%</b>
+                    <span className="kn-macro-grams-light">{proteineAssunteG}g · obiettivo {calc ? calc.proteinG : "—"}g</span>
+                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: proteinePctComposizione + "%", background: "linear-gradient(90deg, var(--protein), #7ADFFF)" }} /></div>
                   </div>
-                </div>
+                  </div>
+                </>
               )}
 
               {vistaOggi && (

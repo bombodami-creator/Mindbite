@@ -1,33 +1,37 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 
 const STYLE = `
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap');
 
 .kn-root {
-  --paper: #12151A;
+  --paper: #0B0E12;
   --shell-bg: var(--card);
-  --card: #1B1F26;
-  --card-alt: #222831;
-  --input-bg: #1F242C;
-  --ink: #F3F5F7;
-  --ink-soft: #9AA3B2;
-  --line: #2B3038;
+  --card: #171B22;
+  --card-alt: #1B2029;
+  --input-bg: #1B2029;
+  --ink: #F7F9FB;
+  --ink-soft: #9AA6B5;
+  --line: #262C36;
   --accent: #2ECC8F;
-  --accent-soft: #17301F;
+  --accent-2: #29B6F6;
+  --accent-3: #A78BFA;
+  --accent-soft: #16301F;
   --btn-bg: var(--accent);
-  --btn-bg-text: #0B1F16;
+  --btn-bg-text: #061019;
   --carb: #F2994A;
   --fat: #E8B23D;
-  --protein: #2ECC8F;
+  --protein: var(--accent-2);
   --clay: #E5654A;
-  --btn-text: #0B1F16;
-  --shadow: 0 6px 20px rgba(0,0,0,0.28);
-  --radius-lg: 20px;
+  --btn-text: #061019;
+  --shadow: 0 14px 32px rgba(0,0,0,0.4);
+  --shadow-glow: 0 10px 24px rgba(46,204,143,0.32);
+  --radius-lg: 24px;
+  --radius-xl: 28px;
   --radius-md: 14px;
   --radius-pill: 999px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter Tight', sans-serif;
   color: var(--ink);
-  background: var(--paper);
+  background: radial-gradient(130% 40% at 50% -10%, rgba(41,182,246,0.16), transparent 60%), radial-gradient(90% 35% at 90% 0%, rgba(167,139,250,0.11), transparent 55%), var(--paper);
   min-height: 100%;
   display: flex;
   flex-direction: column;
@@ -47,6 +51,8 @@ const STYLE = `
   --ink-soft: #77847F;
   --line: #E3E9E6;
   --accent: #176B56;
+  --accent-2: #3274A6;
+  --accent-3: #7A5FC7;
   --accent-soft: #E7F2EC;
   --btn-bg: var(--accent);
   --btn-bg-text: #FFFFFF;
@@ -56,6 +62,8 @@ const STYLE = `
   --clay: #E0533A;
   --btn-text: #FFFFFF;
   --shadow: 0 4px 16px rgba(30,40,60,0.08);
+  --shadow-glow: var(--shadow);
+  background: var(--paper);
 }
 .kn-root * { box-sizing: border-box; }
 .kn-shell {
@@ -68,14 +76,14 @@ const STYLE = `
   position: relative;
 }
 .kn-brand { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
-.kn-brand-mark { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 26px; letter-spacing: -0.01em; color: var(--accent); }
+.kn-brand-mark { font-family: 'Inter Tight', sans-serif; font-weight: 600; font-size: 26px; letter-spacing: -0.01em; color: var(--accent); }
 .kn-brand-tag { font-size: 13px; color: var(--ink-soft); }
 .kn-divider { height: 1px; background: var(--line); margin: 20px 0 24px; }
 
 .kn-field { margin-bottom: 18px; }
 .kn-label { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: 6px; }
 .kn-input {
-  width: 100%; font-family: 'Inter', sans-serif; font-size: 15px; padding: 12px 14px;
+  width: 100%; font-family: 'Inter Tight', sans-serif; font-size: 15px; padding: 12px 14px;
   border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--input-bg); color: var(--ink);
 }
 .kn-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -85,11 +93,12 @@ const STYLE = `
 .kn-pwd-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 17px; padding: 8px; line-height: 1; color: var(--ink-soft); }
 
 .kn-btn {
-  width: 100%; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600;
+  width: 100%; font-family: 'Inter Tight', sans-serif; font-size: 15px; font-weight: 600;
   padding: 14px 16px; border-radius: var(--radius-md);
-  border: none; cursor: pointer; background: var(--btn-bg); color: var(--btn-bg-text);
-  box-shadow: 0 4px 14px rgba(23,107,86,0.28);
+  border: none; cursor: pointer; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--btn-bg-text);
+  box-shadow: var(--shadow-glow);
 }
+.kn-root.kn-light .kn-btn:not(.kn-btn-ghost) { background: var(--btn-bg); }
 .kn-btn:hover { filter: brightness(1.04); }
 .kn-btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
 .kn-btn-ghost { background: none; border: 1px solid var(--line); color: var(--ink); box-shadow: none; }
@@ -106,12 +115,12 @@ const STYLE = `
 .kn-step.done { color: var(--accent); }
 .kn-step-num { width: 18px; height: 18px; border-radius: 50%; border: 1px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 11px; }
 
-.kn-h1 { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 19px; letter-spacing: -0.01em; margin: 0 0 6px; }
+.kn-h1 { font-family: 'Inter Tight', sans-serif; font-weight: 600; font-size: 19px; letter-spacing: -0.01em; margin: 0 0 6px; }
 .kn-sub { font-size: 13px; color: var(--ink-soft); margin: 0 0 16px; line-height: 1.45; }
 
 .kn-toggle-row { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
 .kn-toggle { flex: 1; padding: 10px 14px; text-align: center; border: 1px solid var(--line); border-radius: var(--radius-pill); cursor: pointer; font-size: 13.5px; font-weight: 500; }
-.kn-toggle.sel { border-color: var(--accent); background: var(--accent); color: var(--btn-text); }
+.kn-toggle.sel { border-color: var(--accent); background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--btn-text); }
 
 .kn-choice-card { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 10px; cursor: pointer; box-shadow: var(--shadow); }
 .kn-choice-card.sel { border-color: var(--accent); background: var(--card-alt); }
@@ -122,20 +131,20 @@ const STYLE = `
 .kn-slider-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
 .kn-slider { width: 100%; accent-color: var(--accent); }
 
-.kn-result-num { font-family: 'Inter', sans-serif; font-size: 64px; line-height: 1; margin: 4px 0 0; color: var(--accent); }
+.kn-result-num { font-family: 'Inter Tight', sans-serif; font-size: 64px; line-height: 1; margin: 4px 0 0; color: var(--accent); }
 .kn-result-label { font-size: 13px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; }
 .kn-result-note { font-size: 13.5px; color: var(--ink-soft); margin-top: 8px; }
 
 .kn-stat-row { display: flex; margin: 22px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 14px 0; }
 .kn-stat { flex: 1; }
 .kn-stat + .kn-stat { padding-left: 16px; margin-left: 16px; }
-.kn-stat-val { font-family: 'Inter', sans-serif; font-size: 24px; letter-spacing: 0.02em; }
+.kn-stat-val { font-family: 'Inter Tight', sans-serif; font-size: 24px; letter-spacing: 0.02em; }
 .kn-stat-lbl { font-size: 12px; color: var(--ink-soft); }
 
 .kn-macro-row { margin-bottom: 14px; }
 .kn-macro-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
 .kn-macro-name { font-size: 14px; font-weight: 600; }
-.kn-macro-pct-primary { font-size: 16px; font-weight: 800; }
+.kn-macro-pct-primary { font-size: 16px; font-weight: 600; }
 .kn-macro-grams-light { font-size: 12px; color: var(--ink-soft); font-weight: 400; }
 .kn-macro-bar-track { height: 8px; background: var(--paper); border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
 .kn-macro-bar-fill { height: 100%; }
@@ -150,11 +159,11 @@ const STYLE = `
 
 .kn-kcal-block { margin: 14px 0 20px; }
 .kn-kcal-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-.kn-kcal-num { font-family: 'Inter', sans-serif; font-size: 36px; color: var(--accent); }
+.kn-kcal-num { font-family: 'Inter Tight', sans-serif; font-size: 36px; color: var(--accent); }
 .kn-kcal-of { font-size: 14px; color: var(--ink-soft); }
 .kn-kcal-remain { font-size: 12.5px; color: var(--ink-soft); margin-top: 6px; }
 .kn-bar-track { height: 10px; background: var(--paper); border-radius: 5px; overflow: hidden; border: 1px solid var(--line); }
-.kn-bar-fill { height: 100%; background: var(--accent); }
+.kn-bar-fill { height: 100%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
 .kn-bar-fill.over { background: var(--clay); }
 
 .kn-mini-macros { display: flex; gap: 16px; margin: 16px 0 22px; }
@@ -162,7 +171,7 @@ const STYLE = `
 .kn-mini-macro-top { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--ink-soft); margin-bottom: 4px; }
 .kn-mini-macro-track { height: 5px; background: var(--paper); border-radius: 3px; border: 1px solid var(--line); overflow: hidden; }
 
-.kn-meal-card { border: none; border-radius: var(--radius-lg); margin-bottom: 14px; background: var(--card); box-shadow: var(--shadow); overflow: hidden; }
+.kn-meal-card { border: none; border-radius: var(--radius-lg); margin-bottom: 14px; background: linear-gradient(165deg, var(--card-alt), var(--card)); box-shadow: var(--shadow); overflow: hidden; }
 .kn-meal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; }
 .kn-meal-name { font-size: 14.5px; font-weight: 600; }
 .kn-meal-kcal { font-size: 12.5px; color: var(--ink-soft); }
@@ -179,7 +188,7 @@ const STYLE = `
 .kn-meal-empty { padding: 10px 14px; font-size: 12.5px; color: var(--ink-soft); font-style: italic; border-top: 1px solid var(--line); }
 
 .kn-entry-row { display: flex; gap: 10px; margin-top: 18px; }
-.kn-entry-btn { flex: 1; border: none; border-radius: var(--radius-md); padding: 13px; text-align: center; font-size: 13.5px; font-weight: 500; cursor: pointer; background: var(--card); box-shadow: var(--shadow); }
+.kn-entry-btn { flex: 1; border: none; border-radius: var(--radius-md); padding: 13px; text-align: center; font-size: 13.5px; font-weight: 500; cursor: pointer; background: linear-gradient(165deg, var(--card-alt), var(--card)); box-shadow: var(--shadow); }
 .kn-entry-btn:hover { border-color: var(--accent); }
 
 .kn-navbar { display: flex; align-items: flex-end; border-top: 1px solid var(--line); margin-top: 24px; padding-top: 10px; gap: 2px; }
@@ -188,25 +197,25 @@ const STYLE = `
 
 /* Calendario */
 .kn-cal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
-.kn-cal-nav { background: var(--card); border: none; border-radius: var(--radius-pill); width: 32px; height: 32px; cursor: pointer; font-size: 14px; color: var(--ink-soft); box-shadow: var(--shadow); }
+.kn-cal-nav { background: linear-gradient(165deg, var(--card-alt), var(--card)); border: none; border-radius: var(--radius-pill); width: 32px; height: 32px; cursor: pointer; font-size: 14px; color: var(--ink-soft); box-shadow: var(--shadow); }
 .kn-cal-nav:hover { border-color: var(--accent); color: var(--accent); }
 .kn-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
 .kn-cal-weekday { text-align: center; font-size: 11px; color: var(--ink-soft); padding-bottom: 6px; }
 .kn-day-cell { aspect-ratio: 1; border: 1px solid transparent; border-radius: var(--radius-pill); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; gap: 3px; }
 .kn-day-cell.empty { cursor: default; }
 .kn-day-cell.today { border-color: var(--accent); }
-.kn-day-cell.sel { background: var(--accent); color: var(--btn-text); }
+.kn-day-cell.sel { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--btn-text); }
 .kn-day-dot { width: 5px; height: 5px; border-radius: 50%; }
-.kn-day-dot.ok { background: var(--accent); }
+.kn-day-dot.ok { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
 .kn-day-dot.alto { background: var(--clay); }
 .kn-day-dot.basso { background: var(--fat); }
 
 .kn-cal-legend { display: flex; gap: 14px; font-size: 11.5px; color: var(--ink-soft); margin: 6px 0 18px; }
 .kn-cal-legend-item { display: flex; align-items: center; gap: 5px; }
 
-.kn-day-detail { border: none; border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow); background: var(--card); }
+.kn-day-detail { border: none; border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow); background: linear-gradient(165deg, var(--card-alt), var(--card)); }
 .kn-day-detail-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
-.kn-day-detail-date { font-family: 'Inter', sans-serif; font-size: 20px; letter-spacing: 0.02em; }
+.kn-day-detail-date { font-family: 'Inter Tight', sans-serif; font-size: 20px; letter-spacing: 0.02em; }
 .kn-day-detail-kcal { font-size: 14px; color: var(--ink-soft); }
 
 /* Profilo */
@@ -215,13 +224,13 @@ const STYLE = `
 .kn-save-note { font-size: 12.5px; color: var(--accent); margin-top: 10px; text-align: center; }
 
 /* Community */
-.kn-code-box { display: flex; align-items: center; justify-content: space-between; border: none; border-radius: var(--radius-lg); padding: 16px 18px; margin-bottom: 8px; box-shadow: var(--shadow); background: var(--card); }
-.kn-code-value { font-family: 'Inter', sans-serif; font-size: 22px; letter-spacing: 0.1em; color: var(--accent); }
+.kn-code-box { display: flex; align-items: center; justify-content: space-between; border: none; border-radius: var(--radius-lg); padding: 16px 18px; margin-bottom: 8px; box-shadow: var(--shadow); background: linear-gradient(165deg, var(--card-alt), var(--card)); }
+.kn-code-value { font-family: 'Inter Tight', sans-serif; font-size: 22px; letter-spacing: 0.1em; color: var(--accent); }
 .kn-code-actions { display: flex; gap: 8px; }
 .kn-code-btn { background: var(--card-alt); border: none; border-radius: var(--radius-pill); padding: 7px 12px; font-size: 12px; cursor: pointer; color: var(--ink-soft); }
 .kn-code-btn:hover { border-color: var(--accent); color: var(--accent); }
 .kn-code-hint { font-size: 12px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 4px; }
-.kn-contact-card { display: flex; justify-content: space-between; align-items: center; border: none; border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow); background: var(--card); }
+.kn-contact-card { display: flex; justify-content: space-between; align-items: center; border: none; border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow); background: linear-gradient(165deg, var(--card-alt), var(--card)); }
 .kn-contact-card.disconnesso { opacity: 0.55; }
 .kn-contact-name { font-weight: 600; font-size: 14px; }
 .kn-contact-meta { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
@@ -241,7 +250,7 @@ const STYLE = `
 .kn-loading { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--ink-soft); padding: 30px 0; justify-content: center; }
 .kn-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: kn-spin 0.8s linear infinite; }
 @keyframes kn-spin { to { transform: rotate(360deg); } }
-.kn-dish-name { font-family: 'Inter', sans-serif; font-size: 26px; letter-spacing: 0.02em; color: var(--accent); margin: 0 0 2px; }
+.kn-dish-name { font-family: 'Inter Tight', sans-serif; font-size: 26px; letter-spacing: 0.02em; color: var(--accent); margin: 0 0 2px; }
 .kn-dish-sub { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 18px; }
 .kn-ing-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px dashed var(--line); }
 .kn-ing-name { flex: 1; font-size: 14px; }
@@ -250,13 +259,13 @@ const STYLE = `
 .kn-ing-del { background: none; border: none; color: var(--ink-soft); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px; }
 .kn-ing-del:hover { color: var(--clay); }
 .kn-total-row { display: flex; justify-content: space-between; align-items: baseline; padding: 16px 0 6px; margin-top: 4px; border-top: 1px solid var(--line); }
-.kn-total-num { font-family: 'Inter', sans-serif; font-size: 30px; color: var(--accent); }
+.kn-total-num { font-family: 'Inter Tight', sans-serif; font-size: 30px; color: var(--accent); }
 .kn-total-label { font-size: 12px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; }
 .kn-check-row { display: flex; align-items: center; gap: 10px; margin: 4px 0 16px; cursor: pointer; font-size: 14px; }
 .kn-check-box { width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.kn-check-box.on { background: var(--accent); border-color: var(--accent); color: var(--btn-text); font-size: 12px; }
+.kn-check-box.on { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: var(--accent); color: var(--btn-text); font-size: 12px; }
 .kn-error { font-size: 13px; color: var(--clay); text-align: center; margin: 12px 0; }
-.kn-recipe-card { display: flex; gap: 12px; border: none; border-radius: var(--radius-md); padding: 12px; margin-bottom: 10px; box-shadow: var(--shadow); background: var(--card); }
+.kn-recipe-card { display: flex; gap: 12px; border: none; border-radius: var(--radius-md); padding: 12px; margin-bottom: 10px; box-shadow: var(--shadow); background: linear-gradient(165deg, var(--card-alt), var(--card)); }
 .kn-recipe-thumb { width: 56px; height: 56px; border-radius: var(--radius-md); object-fit: cover; flex-shrink: 0; background: var(--card-alt); }
 .kn-recipe-info { flex: 1; min-width: 0; }
 .kn-recipe-name-input { font-size: 14px; font-weight: 600; border: none; background: none; color: var(--ink); width: 100%; padding: 0; margin-bottom: 2px; font-family: inherit; }
@@ -266,15 +275,15 @@ const STYLE = `
 .kn-recipe-del:hover { color: var(--clay); }
 
 /* Consiglio cena */
-.kn-residuo-box { border: none; border-radius: var(--radius-lg); padding: 16px 18px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: baseline; box-shadow: var(--shadow); background: var(--card); }
-.kn-residuo-num { font-family: 'Inter', sans-serif; font-size: 26px; color: var(--accent); }
+.kn-residuo-box { border: none; border-radius: var(--radius-lg); padding: 16px 18px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: baseline; box-shadow: var(--shadow); background: linear-gradient(165deg, var(--card-alt), var(--card)); }
+.kn-residuo-num { font-family: 'Inter Tight', sans-serif; font-size: 26px; color: var(--accent); }
 .kn-residuo-label { font-size: 12px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; }
-.kn-textarea { width: 100%; font-family: 'Inter', sans-serif; font-size: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--input-bg); color: var(--ink); resize: vertical; min-height: 70px; }
+.kn-textarea { width: 100%; font-family: 'Inter Tight', sans-serif; font-size: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--input-bg); color: var(--ink); resize: vertical; min-height: 70px; }
 .kn-or-sep { text-align: center; font-size: 12px; color: var(--ink-soft); margin: 14px 0; text-transform: uppercase; letter-spacing: 0.05em; }
-.kn-proposta-card { border: none; border-radius: var(--radius-lg); padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); background: var(--card); }
+.kn-proposta-card { border: none; border-radius: var(--radius-lg); padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); background: linear-gradient(165deg, var(--card-alt), var(--card)); }
 .kn-proposta-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
-.kn-proposta-nome { font-family: 'Inter', sans-serif; font-size: 21px; letter-spacing: 0.02em; }
-.kn-proposta-kcal { font-family: 'Inter', sans-serif; font-size: 21px; color: var(--accent); white-space: nowrap; }
+.kn-proposta-nome { font-family: 'Inter Tight', sans-serif; font-size: 21px; letter-spacing: 0.02em; }
+.kn-proposta-kcal { font-family: 'Inter Tight', sans-serif; font-size: 21px; color: var(--accent); white-space: nowrap; }
 .kn-proposta-meta { font-size: 12px; color: var(--ink-soft); margin-bottom: 12px; }
 .kn-proposta-ing { font-size: 13px; color: var(--ink-soft); margin-bottom: 10px; line-height: 1.6; }
 .kn-proposta-steps { font-size: 13px; margin: 0 0 14px; padding-left: 18px; line-height: 1.7; }
@@ -282,40 +291,40 @@ const STYLE = `
 .kn-alert-pasto { background: var(--accent-soft); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 18px; display: flex; gap: 10px; align-items: flex-start; }
 .kn-alert-pasto-icon { font-size: 18px; flex-shrink: 0; line-height: 1.3; }
 .kn-alert-pasto-text { font-size: 12.5px; line-height: 1.5; color: var(--ink); }
-.kn-alert-pasto-title { font-weight: 700; font-size: 13px; margin-bottom: 3px; }
+.kn-alert-pasto-title { font-weight: 600; font-size: 13px; margin-bottom: 3px; }
 .kn-proposta-btnrow { display: flex; gap: 8px; }
-.kn-proposta-btn-sm { flex: 1; font-size: 12.5px; padding: 10px; border-radius: var(--radius-pill); border: 1px solid var(--line); background: var(--card); cursor: pointer; color: var(--ink); text-align: center; font-weight: 500; }
+.kn-proposta-btn-sm { flex: 1; font-size: 12.5px; padding: 10px; border-radius: var(--radius-pill); border: 1px solid var(--line); background: linear-gradient(165deg, var(--card-alt), var(--card)); cursor: pointer; color: var(--ink); text-align: center; font-weight: 500; }
 .kn-proposta-btn-sm:hover { border-color: var(--accent); }
-.kn-proposta-btn-sm.principale { background: var(--accent); color: var(--btn-text); border-color: var(--accent); }
+.kn-proposta-btn-sm.principale { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--btn-text); border-color: var(--accent); }
 
 /* Community: proposte */
-.kn-share-card { border: none; border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow); background: var(--card); }
+.kn-share-card { border: none; border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow); background: linear-gradient(165deg, var(--card-alt), var(--card)); }
 .kn-share-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
 .kn-share-nome { font-weight: 600; font-size: 14.5px; }
 .kn-share-kcal { font-size: 13px; color: var(--ink-soft); }
 .kn-adapt-box { background: var(--card-alt); border-radius: var(--radius-md); padding: 12px 14px; margin-top: 10px; font-size: 12.5px; line-height: 1.5; }
 .kn-adapt-name { font-weight: 600; margin-bottom: 3px; }
-.kn-validate-btn { margin-top: 8px; font-size: 12px; padding: 7px 12px; border-radius: var(--radius-pill); border: 1px solid var(--line); background: var(--card); cursor: pointer; color: var(--ink); font-weight: 500; }
-.kn-validate-btn.on { background: var(--accent); color: var(--btn-text); border-color: var(--accent); }
+.kn-validate-btn { margin-top: 8px; font-size: 12px; padding: 7px 12px; border-radius: var(--radius-pill); border: 1px solid var(--line); background: linear-gradient(165deg, var(--card-alt), var(--card)); cursor: pointer; color: var(--ink); font-weight: 500; }
+.kn-validate-btn.on { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--btn-text); border-color: var(--accent); }
 
 /* Cerca alimento */
 .kn-search-list { max-height: 320px; overflow-y: auto; }
-.kn-search-item { display: flex; justify-content: space-between; align-items: center; padding: 13px 14px; border: none; border-radius: var(--radius-md); margin-bottom: 8px; cursor: pointer; box-shadow: var(--shadow); background: var(--card); }
+.kn-search-item { display: flex; justify-content: space-between; align-items: center; padding: 13px 14px; border: none; border-radius: var(--radius-md); margin-bottom: 8px; cursor: pointer; box-shadow: var(--shadow); background: linear-gradient(165deg, var(--card-alt), var(--card)); }
 .kn-search-item:hover { border-color: var(--accent); }
 .kn-search-item-name { font-size: 14px; }
 .kn-search-item-kcal { font-size: 12px; color: var(--ink-soft); }
-.kn-weigh-box { border: none; border-radius: var(--radius-lg); padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); background: var(--card); }
-.kn-weigh-name { font-family: 'Inter', sans-serif; font-size: 22px; letter-spacing: 0.02em; color: var(--accent); margin-bottom: 12px; }
+.kn-weigh-box { border: none; border-radius: var(--radius-lg); padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); background: linear-gradient(165deg, var(--card-alt), var(--card)); }
+.kn-weigh-name { font-family: 'Inter Tight', sans-serif; font-size: 22px; letter-spacing: 0.02em; color: var(--accent); margin-bottom: 12px; }
 .kn-weigh-row { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
 .kn-weigh-input { width: 90px; font-size: 18px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--input-bg); color: var(--ink); text-align: right; }
-.kn-weigh-kcal { font-family: 'Inter', sans-serif; font-size: 26px; color: var(--ink); }
+.kn-weigh-kcal { font-family: 'Inter Tight', sans-serif; font-size: 26px; color: var(--ink); }
 .kn-macro-mini-grid { display: flex; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
 .kn-macro-mini-cell { flex: 1; text-align: center; }
-.kn-macro-mini-val { display: block; font-family: 'Inter', sans-serif; font-size: 18px; }
+.kn-macro-mini-val { display: block; font-family: 'Inter Tight', sans-serif; font-size: 18px; }
 .kn-macro-mini-lbl { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
 
 .kn-fridge-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
-.kn-fridge-item { display: flex; align-items: center; gap: 12px; background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 12px 14px; }
+.kn-fridge-item { display: flex; align-items: center; gap: 12px; background: linear-gradient(165deg, var(--card-alt), var(--card)); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 12px 14px; }
 .kn-fridge-icon { width: 44px; height: 44px; border-radius: var(--radius-md); background: var(--card-alt); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
 .kn-fridge-name { font-size: 13.5px; font-weight: 600; }
 .kn-fridge-qty { font-size: 11.5px; color: var(--ink-soft); margin-top: 1px; }
@@ -324,12 +333,12 @@ const STYLE = `
 .kn-fridge-add-row .kn-input:last-child { flex: 1; }
 
 /* Statistiche */
-.kn-chart-card { background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 20px 16px 14px; margin-bottom: 18px; display: flex; align-items: flex-end; justify-content: space-between; height: 160px; }
+.kn-chart-card { background: linear-gradient(165deg, var(--card-alt), var(--card)); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 20px 16px 14px; margin-bottom: 18px; display: flex; align-items: flex-end; justify-content: space-between; height: 160px; }
 .kn-chart-bar-wrap { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 8px; }
-.kn-chart-bar { width: 18px; border-radius: 6px 6px 2px 2px; background: var(--accent); min-height: 4px; }
+.kn-chart-bar { width: 18px; border-radius: 6px 6px 2px 2px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); min-height: 4px; }
 .kn-chart-bar.over { background: var(--clay); }
 .kn-chart-bar-lbl { font-size: 10.5px; color: var(--ink-soft); }
-.kn-donut-card { background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 18px 16px; display: flex; align-items: center; gap: 18px; margin-bottom: 16px; }
+.kn-donut-card { background: linear-gradient(165deg, var(--card-alt), var(--card)); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 18px 16px; display: flex; align-items: center; gap: 18px; margin-bottom: 16px; }
 .kn-donut { width: 84px; height: 84px; border-radius: 50%; flex-shrink: 0; }
 .kn-donut-legend { font-size: 12.5px; line-height: 2; }
 .kn-donut-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; }
@@ -338,34 +347,35 @@ const STYLE = `
 /* Assistente AI */
 .kn-ai-header { text-align: center; padding: 18px 10px 22px; }
 .kn-ai-robot { font-size: 50px; }
-.kn-ai-card { background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 16px 18px; margin-bottom: 12px; }
-.kn-ai-card-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.kn-ai-card { background: linear-gradient(165deg, var(--card-alt), var(--card)); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 16px 18px; margin-bottom: 12px; }
+.kn-ai-card-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
 .kn-ai-card-text { font-size: 13px; color: var(--ink-soft); line-height: 1.5; }
 
 /* Andamento peso */
-.kn-weight-card { background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 16px; margin-bottom: 18px; }
-.kn-weight-log-row { display: flex; justify-content: space-between; align-items: center; background: var(--card); border-radius: var(--radius-md); box-shadow: var(--shadow); padding: 10px 14px; margin-bottom: 8px; font-size: 13px; }
+.kn-weight-card { background: linear-gradient(165deg, var(--card-alt), var(--card)); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 16px; margin-bottom: 18px; }
+.kn-weight-log-row { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(165deg, var(--card-alt), var(--card)); border-radius: var(--radius-md); box-shadow: var(--shadow); padding: 10px 14px; margin-bottom: 8px; font-size: 13px; }
 
 .kn-bilancio-periodo { text-align: center; font-size: 12.5px; color: var(--ink-soft); margin-bottom: 16px; }
 .kn-bilancio-grid { display: flex; gap: 12px; margin-bottom: 16px; }
-.kn-bilancio-cell { flex: 1; background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 14px; text-align: center; }
+.kn-bilancio-cell { flex: 1; background: linear-gradient(165deg, var(--card-alt), var(--card)); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 14px; text-align: center; }
 .kn-bilancio-cell-lbl { font-size: 11px; color: var(--ink-soft); margin-bottom: 6px; }
-.kn-bilancio-cell-val { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.02em; }
+.kn-bilancio-cell-val { font-family: 'Inter Tight', sans-serif; font-weight: 600; font-size: 20px; letter-spacing: -0.02em; }
 .kn-bilancio-verdict { border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 16px; font-size: 13px; line-height: 1.5; }
 .kn-bilancio-verdict.ok { background: var(--accent-soft); color: var(--ink); }
-.kn-bilancio-verdict.warn { background: #FBF0E4; color: var(--ink); }
+.kn-bilancio-verdict.warn { background: rgba(232,178,61,0.14); border: 1px solid rgba(232,178,61,0.35); color: var(--ink); }
+.kn-root.kn-light .kn-bilancio-verdict.warn { background: #FBF0E4; border: none; }
 .kn-bilancio-comp-row { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px dashed var(--line); font-size: 13px; }
 .kn-bilancio-comp-row:first-child { border-top: none; }
 
 /* Dashboard progressi */
-.kn-link-list { background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow); margin-bottom: 18px; overflow: hidden; }
+.kn-link-list { background: linear-gradient(165deg, var(--card-alt), var(--card)); border-radius: var(--radius-lg); box-shadow: var(--shadow); margin-bottom: 18px; overflow: hidden; }
 .kn-link-row { display: flex; align-items: center; gap: 12px; padding: 13px 16px; cursor: pointer; border-top: 1px solid var(--line); }
 .kn-link-row:first-child { border-top: none; }
 .kn-link-row-icon { font-size: 18px; width: 22px; text-align: center; }
 .kn-link-row-label { flex: 1; font-size: 14px; font-weight: 500; }
 .kn-link-row-chevron { color: var(--ink-soft); font-size: 14px; }
 .kn-promemoria-card { background: var(--accent-soft); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; }
-.kn-dispensa-suggest-card { background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+.kn-dispensa-suggest-card { background: linear-gradient(165deg, var(--card-alt), var(--card)); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
 .kn-dispensa-suggest-info { flex: 1; min-width: 0; }
 .kn-dispensa-suggest-nome { font-size: 13.5px; font-weight: 600; }
 .kn-dispensa-suggest-motivo { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
@@ -374,27 +384,30 @@ const STYLE = `
 .kn-result-num, .kn-stat-val, .kn-kcal-num, .kn-day-detail-date, .kn-code-value,
 .kn-dish-name, .kn-total-num, .kn-residuo-num, .kn-proposta-nome, .kn-proposta-kcal,
 .kn-weigh-kcal, .kn-weigh-name, .kn-brand-mark {
-  font-weight: 800; letter-spacing: -0.02em;
+  font-weight: 600; letter-spacing: -0.02em;
 }
 .kn-macro-bar-track, .kn-bar-track, .kn-mini-macro-track { border-radius: var(--radius-pill); }
 .kn-macro-bar-fill, .kn-bar-fill { border-radius: var(--radius-pill); }
 
 /* Anello circolare kcal */
+@keyframes kn-ring-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.75; } }
 .kn-ring-wrap { position: relative; width: 128px; height: 128px; flex-shrink: 0; }
+.kn-ring-glow { position: absolute; inset: 8px; border-radius: 50%; background: radial-gradient(circle, var(--accent) 0%, transparent 68%); opacity: 0.5; filter: blur(18px); animation: kn-ring-pulse 3.4s ease-in-out infinite; }
 .kn-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.kn-ring-num { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
-.kn-ring-lbl { font-size: 9px; color: var(--ink-soft); margin-top: 2px; text-align: center; }
+.kn-ring-num { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
+.kn-ring-lbl { font-size: 10.5px; color: var(--ink-soft); margin-top: 3px; text-align: center; }
 
 .kn-home-top { display: flex; align-items: stretch; gap: 12px; margin-bottom: 16px; }
-.kn-greeting { font-size: 18px; font-weight: 700; margin-bottom: 1px; }
+.kn-greeting { font-size: 18px; font-weight: 600; margin-bottom: 1px; }
 .kn-greeting-sub { font-size: 12px; color: var(--ink-soft); }
-.kn-ring-card { flex: 1.3; background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; padding: 16px; }
-.kn-rimaste-card { flex: 1; background: linear-gradient(145deg, var(--accent-soft), #D9ECDF); border-radius: var(--radius-lg); padding: 16px 14px; display: flex; flex-direction: column; justify-content: center; }
+.kn-ring-card { flex: 1.3; background: linear-gradient(165deg, var(--card-alt), var(--card)); border-radius: var(--radius-lg); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.kn-rimaste-card { flex: 1; background: linear-gradient(145deg, var(--accent-soft), var(--card-alt)); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 16px 14px; display: flex; flex-direction: column; justify-content: center; }
+.kn-root.kn-light .kn-rimaste-card { background: linear-gradient(145deg, var(--accent-soft), #D9ECDF); border: none; }
 .kn-rimaste-lbl-top { font-size: 11px; color: var(--ink-soft); }
-.kn-rimaste-num { font-size: 18px; font-weight: 800; color: var(--ink); letter-spacing: -0.02em; margin-top: 4px; }
+.kn-rimaste-num { font-size: 18px; font-weight: 600; color: var(--ink); letter-spacing: -0.02em; margin-top: 4px; }
 .kn-rimaste-lbl { font-size: 10.5px; color: var(--ink-soft); margin-top: 6px; }
 
-.kn-mini-macros-card { background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 16px; display: flex; gap: 14px; }
+.kn-mini-macros-card { background: linear-gradient(165deg, var(--card-alt), var(--card)); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 16px; display: flex; gap: 14px; }
 .kn-mini-macros-card .kn-mini-macro { flex: 1; }
 .kn-mini-macros-card .kn-mini-macro-top { font-size: 10.5px; color: var(--ink-soft); margin-bottom: 4px; }
 .kn-mini-macros-card b { display: block; font-size: 12px; margin-bottom: 6px; }
@@ -402,17 +415,17 @@ const STYLE = `
 
 .kn-meal-icon { width: 44px; height: 44px; border-radius: var(--radius-md); background: var(--card-alt); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
 
-.kn-navbar-fab { width: 50px; height: 50px; border-radius: 50%; background: var(--accent); color: var(--btn-text); display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; box-shadow: 0 6px 16px rgba(23,107,86,0.4); margin-top: -22px; border: 4px solid var(--card); }
+.kn-navbar-fab { width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2) 55%, var(--accent-3)); color: var(--btn-text); display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; box-shadow: 0 0 0 5px rgba(41,182,246,0.12), var(--shadow-glow); margin-top: -24px; border: 4px solid var(--shell-bg); }
 
 .kn-home-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.kn-icon-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--card); box-shadow: var(--shadow); border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.kn-icon-btn { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(165deg, var(--card-alt), var(--card)); box-shadow: var(--shadow); border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
 .kn-meal-list { background: transparent; box-shadow: none; overflow: visible; margin-bottom: 18px; display: flex; flex-direction: column; gap: 10px; }
-.kn-meal-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+.kn-meal-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; background: linear-gradient(165deg, var(--card-alt), var(--card)); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
 .kn-meal-row-name { font-size: 13.5px; font-weight: 600; }
 .kn-meal-row-sub { font-size: 11px; color: var(--ink-soft); margin-top: 1px; }
 .kn-meal-row-kcal { font-size: 12px; color: var(--ink-soft); font-weight: 500; white-space: nowrap; }
-.kn-meal-row-expand { padding: 12px 14px; background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow); margin-top: -6px; }
+.kn-meal-row-expand { padding: 12px 14px; background: linear-gradient(165deg, var(--card-alt), var(--card)); border-radius: var(--radius-lg); box-shadow: var(--shadow); margin-top: -6px; }
 .kn-meal-add-link { background: none; border: none; color: var(--accent); font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 8px 0 0; }
 `;
 
@@ -710,14 +723,26 @@ function GraficoPeso({ dati, pesoObiettivo }) {
 }
 
 function KcalRing({ pct, kcal, target, light }) {
-  const size = 88, stroke = 9, r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  const size = 128, stroke = 12, r = (size - stroke) / 2, c = 2 * Math.PI * r;
   const clampedPct = Math.min(100, Math.max(0, pct));
   const dash = (c * clampedPct) / 100;
   const trackColor = light ? "rgba(255,255,255,0.25)" : "var(--line)";
-  const fillColor = light ? "#FFFFFF" : "var(--accent)";
+  const fillColor = light ? "#FFFFFF" : "url(#kcalRingGrad)";
   return (
     <div className="kn-ring-wrap" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {!light && (
+        <div className="kn-ring-glow" />
+      )}
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ position: "relative" }}>
+        {!light && (
+          <defs>
+            <linearGradient id="kcalRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="var(--accent)" />
+              <stop offset="55%" stopColor="var(--accent-2)" />
+              <stop offset="100%" stopColor="var(--accent-3)" />
+            </linearGradient>
+          </defs>
+        )}
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={trackColor} strokeWidth={stroke} />
         <circle
           cx={size / 2} cy={size / 2} r={r} fill="none" stroke={fillColor} strokeWidth={stroke}
@@ -2563,15 +2588,15 @@ export default function MindbiteApp() {
             </div>
             <div className="kn-macro-row">
               <div className="kn-macro-top"><span className="kn-macro-name">Carboidrati</span><span className="kn-macro-pct-primary">{carbP}% <span className="kn-macro-grams-light">({calc.carbG} g)</span></span></div>
-              <div className="kn-macro-bar-track"><div className="kn-macro-bar-fill" style={{ width: carbP + "%", background: "var(--carb)" }} /></div>
+              <div className="kn-macro-bar-track"><div className="kn-macro-bar-fill" style={{ width: carbP + "%", background: "linear-gradient(90deg, var(--carb), #F7B267)" }} /></div>
             </div>
             <div className="kn-macro-row">
               <div className="kn-macro-top"><span className="kn-macro-name">Grassi</span><span className="kn-macro-pct-primary">{fatP}% <span className="kn-macro-grams-light">({calc.fatG} g)</span></span></div>
-              <div className="kn-macro-bar-track"><div className="kn-macro-bar-fill" style={{ width: fatP + "%", background: "var(--fat)" }} /></div>
+              <div className="kn-macro-bar-track"><div className="kn-macro-bar-fill" style={{ width: fatP + "%", background: "linear-gradient(90deg, var(--fat), #F4D06F)" }} /></div>
             </div>
             <div className="kn-macro-row">
               <div className="kn-macro-top"><span className="kn-macro-name">Proteine</span><span className="kn-macro-pct-primary">{proteinP}% <span className="kn-macro-grams-light">({calc.proteinG} g)</span></span></div>
-              <div className="kn-macro-bar-track"><div className="kn-macro-bar-fill" style={{ width: proteinP + "%", background: "var(--protein)" }} /></div>
+              <div className="kn-macro-bar-track"><div className="kn-macro-bar-fill" style={{ width: proteinP + "%", background: "linear-gradient(90deg, var(--protein), #7ADFFF)" }} /></div>
             </div>
             <button className="kn-btn" style={{ marginTop: 12 }} onClick={async () => { await salvaProfiloPersistente(); setAccountEsistente(true); setGiornoVisualizzato(null); setScreen("diario"); }}>Salva e vai al diario</button>
           </>
@@ -2635,19 +2660,19 @@ export default function MindbiteApp() {
                     <div className="kn-mini-macro-top"><span>Carbo</span></div>
                     <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{calc ? Math.round((carboAssuntiG / calc.carbG) * 100) : 0}%</b>
                     <span className="kn-macro-grams-light">{carboAssuntiG}g / {calc ? calc.carbG : "—"}g</span>
-                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: Math.min(100, calc ? (carboAssuntiG / calc.carbG) * 100 : 0) + "%", background: "var(--accent)" }} /></div>
+                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: Math.min(100, calc ? (carboAssuntiG / calc.carbG) * 100 : 0) + "%", background: "linear-gradient(90deg, var(--carb), #F7B267)" }} /></div>
                   </div>
                   <div className="kn-mini-macro">
                     <div className="kn-mini-macro-top"><span>Grassi</span></div>
                     <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{calc ? Math.round((grassiAssuntiG / calc.fatG) * 100) : 0}%</b>
                     <span className="kn-macro-grams-light">{grassiAssuntiG}g / {calc ? calc.fatG : "—"}g</span>
-                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: Math.min(100, calc ? (grassiAssuntiG / calc.fatG) * 100 : 0) + "%", background: "var(--accent)" }} /></div>
+                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: Math.min(100, calc ? (grassiAssuntiG / calc.fatG) * 100 : 0) + "%", background: "linear-gradient(90deg, var(--fat), #F4D06F)" }} /></div>
                   </div>
                   <div className="kn-mini-macro">
                     <div className="kn-mini-macro-top"><span>Proteine</span></div>
                     <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{calc ? Math.round((proteineAssunteG / calc.proteinG) * 100) : 0}%</b>
                     <span className="kn-macro-grams-light">{proteineAssunteG}g / {calc ? calc.proteinG : "—"}g</span>
-                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: Math.min(100, calc ? (proteineAssunteG / calc.proteinG) * 100 : 0) + "%", background: "var(--accent)" }} /></div>
+                    <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: Math.min(100, calc ? (proteineAssunteG / calc.proteinG) * 100 : 0) + "%", background: "linear-gradient(90deg, var(--protein), #7ADFFF)" }} /></div>
                   </div>
                 </div>
               )}

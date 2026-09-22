@@ -264,33 +264,52 @@ async function chiediAllAI(env, content, maxTokens) {
     ":generateContent?key=" +
     apiKey;
 
-  var res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: convertiContentPerGemini(content) }],
-      generationConfig: { maxOutputTokens: maxTokens || 1000 }
-    })
+  var corpo = JSON.stringify({
+    contents: [{ role: "user", parts: convertiContentPerGemini(content) }],
+    generationConfig: { maxOutputTokens: maxTokens || 1000 }
   });
 
-  var data = await res.json();
-  if (data.error) {
-    throw new Error("Gemini: " + (data.error.message || JSON.stringify(data.error)));
+  // Gemini a volte risponde con un errore transitorio ("alta domanda,
+  // riprova piu' tardi") nei momenti di picco: ritentiamo un paio di volte
+  // con una breve attesa crescente prima di arrenderci, cosi' l'utente non
+  // deve riprovare a mano per un intoppo che si risolve da solo in pochi
+  // secondi.
+  var tentativiMax = 3;
+  var attesaMs = 800;
+  var ultimoErrore = null;
+
+  for (var tentativo = 0; tentativo < tentativiMax; tentativo++) {
+    var res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: corpo
+    });
+    var data = await res.json();
+
+    if (!data.error) {
+      var candidato = data.candidates && data.candidates[0];
+      var parti = candidato && candidato.content && candidato.content.parts;
+      if (!parti) {
+        var motivo = (candidato && candidato.finishReason) || (data.promptFeedback && data.promptFeedback.blockReason);
+        throw new Error("Gemini: risposta senza contenuto" + (motivo ? " (" + motivo + ")" : ""));
+      }
+      var testo = parti.map(function (p) { return p.text || ""; }).join("");
+      // Adattiamo alla forma che il client (App.jsx) e traduciNomiInItaliano
+      // si aspettano: { content: [{ text: "..." }] }, la stessa struttura
+      // usata prima con l'API Anthropic.
+      return { content: [{ text: testo }] };
+    }
+
+    ultimoErrore = data.error.message || JSON.stringify(data.error);
+    var transitorio = res.status === 503 || /overloaded|high demand|unavailable/i.test(ultimoErrore);
+    if (!transitorio || tentativo === tentativiMax - 1) {
+      throw new Error("Gemini: " + ultimoErrore);
+    }
+    await new Promise(function (risolvi) { setTimeout(risolvi, attesaMs); });
+    attesaMs *= 2;
   }
 
-  var candidato = data.candidates && data.candidates[0];
-  var parti = candidato && candidato.content && candidato.content.parts;
-  if (!parti) {
-    var motivo = (candidato && candidato.finishReason) || (data.promptFeedback && data.promptFeedback.blockReason);
-    throw new Error("Gemini: risposta senza contenuto" + (motivo ? " (" + motivo + ")" : ""));
-  }
-
-  var testo = parti.map(function (p) { return p.text || ""; }).join("");
-
-  // Adattiamo alla forma che il client (App.jsx) e traduciNomiInItaliano si
-  // aspettano: { content: [{ text: "..." }] }, la stessa struttura usata
-  // prima con l'API Anthropic.
-  return { content: [{ text: testo }] };
+  throw new Error("Gemini: " + ultimoErrore);
 }
 
 export default {

@@ -652,6 +652,18 @@ function generaCodiceTemporaneo() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+// Chiave data in formato YYYY-MM-DD nel fuso orario LOCALE dell'utente, non
+// UTC: date.toISOString() converte prima in UTC, quindi tra mezzanotte e le
+// 1-2 di notte locali (a seconda del fuso) il giorno UTC e' ancora quello di
+// ieri. Usare toISOString() per le chiavi del diario causava pasti registrati
+// in quella finestra a finire salvati sotto la data sbagliata.
+function chiaveData(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 // Punto unico per tutte le chiamate a Claude (riconoscimento foto, Consiglia,
 // Assistente, consigli dispensa): centralizza endpoint, modello e il
 // parsing della risposta (che arriva sempre come testo JSON, a volte
@@ -1292,8 +1304,13 @@ export default function MindbiteApp() {
   const [storicoDiario, setStoricoDiario] = useState({}); // { "YYYY-MM-DD": kcalTotali }
 
   function chiaveGiorno(date) {
-    return "diario:" + date.toISOString().slice(0, 10);
+    return "diario:" + chiaveData(date);
   }
+
+  // Data (chiave YYYY-MM-DD locale) per cui pastiOggi e' effettivamente
+  // caricato/salvato: serve per accorgersi che e' scattata la mezzanotte
+  // mentre l'app restava aperta (vedi effetto piu' sotto).
+  const [giornoCaricato, setGiornoCaricato] = useState(null);
 
   useEffect(() => {
     if (caricandoAccount) return; // aspetta che window.storage sia quello giusto (Firestore/backend/locale)
@@ -1304,6 +1321,7 @@ export default function MindbiteApp() {
       } catch (e) {
         /* nessun dato salvato per oggi ancora: resta il vuoto di default */
       }
+      setGiornoCaricato(chiaveData(oggi));
       setPastiCaricati(true);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1317,6 +1335,28 @@ export default function MindbiteApp() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pastiOggi, pastiCaricati]);
+
+  // Se l'app resta aperta a cavallo di mezzanotte, "oggi" (ricalcolato ad
+  // ogni render) cambia da solo, ma pastiOggi in memoria no: senza questo
+  // controllo, il primo pasto registrato il giorno dopo si sommava a quelli
+  // di ieri invece di iniziare un diario vuoto. Controlliamo sia a intervalli
+  // sia quando la scheda torna in primo piano (il caso piu' comune: l'utente
+  // riapre l'app il giorno dopo dalla stessa scheda/PWA mai chiusa).
+  useEffect(() => {
+    function controllaCambioGiorno() {
+      const chiaveOra = chiaveData(new Date());
+      if (giornoCaricato && chiaveOra !== giornoCaricato) {
+        setPastiOggi(JSON.parse(JSON.stringify(PASTI_OGGI_INIT)));
+        setGiornoCaricato(chiaveOra);
+      }
+    }
+    const intervallo = setInterval(controllaCambioGiorno, 60000);
+    document.addEventListener("visibilitychange", controllaCambioGiorno);
+    return () => {
+      clearInterval(intervallo);
+      document.removeEventListener("visibilitychange", controllaCambioGiorno);
+    };
+  }, [giornoCaricato]);
 
   async function caricaStoricoDiario() {
     try {
@@ -1689,7 +1729,7 @@ export default function MindbiteApp() {
     const valore = parseFloat(nuovoPesoValore);
     if (!valore || valore <= 0) return;
     const voce = {
-      data: new Date().toISOString().slice(0, 10),
+      data: chiaveData(new Date()),
       peso: valore,
       vita: nuovaVita ? parseFloat(nuovaVita) : null,
       collo: nuovoCollo ? parseFloat(nuovoCollo) : null,
@@ -1731,7 +1771,7 @@ export default function MindbiteApp() {
     const p2 = ordinati[ordinati.length - 1];
     const giorni = Math.max(1, Math.round((new Date(p2.data) - new Date(p1.data)) / 86400000));
     const target = (calc && calc.target) || 2100;
-    const oggiChiave = oggi.toISOString().slice(0, 10);
+    const oggiChiave = chiaveData(oggi);
 
     let sommaDeficit = 0;
     let giorniConDati = 0;
@@ -1739,7 +1779,7 @@ export default function MindbiteApp() {
     for (let i = 1; i <= giorni; i++) {
       const d = new Date(d1);
       d.setDate(d1.getDate() + i);
-      const chiave = d.toISOString().slice(0, 10);
+      const chiave = chiaveData(d);
       let kcalGiorno = null;
       if (chiave === oggiChiave) kcalGiorno = Object.values(pastiOggi).flat().reduce((s, it) => s + it.kcal, 0);
       else if (storicoDiario[chiave] != null) kcalGiorno = storicoDiario[chiave];
@@ -1931,7 +1971,7 @@ export default function MindbiteApp() {
     const target = (calc && calc.target) || 2100;
     const ieri = new Date(oggi);
     ieri.setDate(oggi.getDate() - 1);
-    const chiaveIeri = ieri.toISOString().slice(0, 10);
+    const chiaveIeri = chiaveData(ieri);
     const kcalIeri = storicoDiario[chiaveIeri];
     if (kcalIeri == null) return null;
     const sogliaAlto = target * 1.08;
@@ -2208,7 +2248,7 @@ export default function MindbiteApp() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(oggi);
       d.setDate(oggi.getDate() - i);
-      const chiave = d.toISOString().slice(0, 10);
+      const chiave = chiaveData(d);
       const kcal = i === 0 ? consumatoOggi : (storicoDiario[chiave] || 0);
       const haDato = i === 0 ? consumatoOggi > 0 : storicoDiario[chiave] != null;
       giorni.push({ label: GIORNI_SETTIMANA[(d.getDay() + 6) % 7], kcal, haDato, oltre: haDato && kcal > target });
@@ -2819,7 +2859,7 @@ export default function MindbiteApp() {
 
           function kcalPerGiorno(d) {
             const dataObj = new Date(oggi.getFullYear(), oggi.getMonth(), d);
-            const chiave = dataObj.toISOString().slice(0, 10);
+            const chiave = chiaveData(dataObj);
             if (d === oggi.getDate()) return Object.values(pastiOggi).flat().reduce((s, it) => s + it.kcal, 0);
             return storicoDiario[chiave] != null ? storicoDiario[chiave] : null;
           }

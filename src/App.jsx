@@ -664,6 +664,13 @@ function chiaveData(date) {
   return `${y}-${m}-${d}`;
 }
 
+// Arrotonda un valore in grammi di un macro a un numero intero (mai decimali
+// in UI: fanno solo confusione), lasciando passare invariati null/undefined
+// (usati per "dato mancante", diverso da 0).
+function arrotondaG(valore) {
+  return valore == null ? valore : Math.round(valore);
+}
+
 // Punto unico per tutte le chiamate a Claude (riconoscimento foto, Consiglia,
 // Assistente, consigli dispensa): centralizza endpoint, modello e il
 // parsing della risposta (che arriva sempre come testo JSON, a volte
@@ -1514,9 +1521,9 @@ export default function MindbiteApp() {
     if (!unitaScelta) return { kcal: 0, carb: 0, fat: 0, protein: 0 };
     return {
       kcal: Math.round(unitaScelta.kcalUnit * quantitaScelta),
-      carb: Math.round(unitaScelta.carbUnit * quantitaScelta * 10) / 10,
-      fat: Math.round(unitaScelta.fatUnit * quantitaScelta * 10) / 10,
-      protein: Math.round(unitaScelta.proteinUnit * quantitaScelta * 10) / 10,
+      carb: Math.round(unitaScelta.carbUnit * quantitaScelta),
+      fat: Math.round(unitaScelta.fatUnit * quantitaScelta),
+      protein: Math.round(unitaScelta.proteinUnit * quantitaScelta),
     };
   }
   function aggiungiDaElenco() {
@@ -2718,19 +2725,19 @@ export default function MindbiteApp() {
                   <div className="kn-mini-macro">
                     <div className="kn-mini-macro-top"><span>Carbo</span></div>
                     <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{carboPctComposizione}%</b>
-                    <span className="kn-macro-grams-light">{carboAssuntiG}g · obiettivo {calc ? calc.carbG : "—"}g</span>
+                    <span className="kn-macro-grams-light">{arrotondaG(carboAssuntiG)}g · obiettivo {calc ? calc.carbG : "—"}g</span>
                     <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: carboPctComposizione + "%", background: "linear-gradient(90deg, var(--carb), #F7B267)" }} /></div>
                   </div>
                   <div className="kn-mini-macro">
                     <div className="kn-mini-macro-top"><span>Grassi</span></div>
                     <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{grassiPctComposizione}%</b>
-                    <span className="kn-macro-grams-light">{grassiAssuntiG}g · obiettivo {calc ? calc.fatG : "—"}g</span>
+                    <span className="kn-macro-grams-light">{arrotondaG(grassiAssuntiG)}g · obiettivo {calc ? calc.fatG : "—"}g</span>
                     <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: grassiPctComposizione + "%", background: "linear-gradient(90deg, var(--fat), #F4D06F)" }} /></div>
                   </div>
                   <div className="kn-mini-macro">
                     <div className="kn-mini-macro-top"><span>Proteine</span></div>
                     <b className="kn-macro-pct-primary" style={{ display: "block", marginBottom: 2 }}>{proteinePctComposizione}%</b>
-                    <span className="kn-macro-grams-light">{proteineAssunteG}g · obiettivo {calc ? calc.proteinG : "—"}g</span>
+                    <span className="kn-macro-grams-light">{arrotondaG(proteineAssunteG)}g · obiettivo {calc ? calc.proteinG : "—"}g</span>
                     <div className="kn-mini-macro-track" style={{ marginTop: 6 }}><div className="kn-macro-bar-fill" style={{ width: proteinePctComposizione + "%", background: "linear-gradient(90deg, var(--protein), #7ADFFF)" }} /></div>
                   </div>
                   </div>
@@ -2811,7 +2818,7 @@ export default function MindbiteApp() {
                                     ))}
                                     {!haIngredienti && haMacro && (
                                       <div className="kn-meal-item-detail-row">
-                                        <span>Carbo {it.carboidratiG}g · Grassi {it.grassiG}g · Proteine {it.proteineG}g</span>
+                                        <span>Carbo {arrotondaG(it.carboidratiG)}g · Grassi {arrotondaG(it.grassiG)}g · Proteine {arrotondaG(it.proteineG)}g</span>
                                       </div>
                                     )}
                                   </div>

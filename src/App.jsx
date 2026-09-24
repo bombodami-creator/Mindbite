@@ -280,8 +280,16 @@ const STYLE = `
 .kn-residuo-label { font-size: 12px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; }
 .kn-textarea { width: 100%; font-family: 'Inter Tight', sans-serif; font-size: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--input-bg); color: var(--ink); resize: vertical; min-height: 70px; }
 .kn-or-sep { text-align: center; font-size: 12px; color: var(--ink-soft); margin: 14px 0; text-transform: uppercase; letter-spacing: 0.05em; }
-.kn-proposta-card { border: none; border-radius: var(--radius-lg); padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); background: linear-gradient(165deg, var(--card-alt), var(--card)); }
-.kn-proposta-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+.kn-proposta-card { border: 2px solid transparent; border-radius: var(--radius-lg); padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); background: linear-gradient(165deg, var(--card-alt), var(--card)); }
+.kn-proposta-card.selezionabile { cursor: pointer; }
+.kn-proposta-card.sel { border-color: var(--accent); box-shadow: var(--shadow-glow); }
+.kn-proposta-check { width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid var(--line); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; color: var(--btn-text); }
+.kn-proposta-card.sel .kn-proposta-check { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; }
+.kn-proposta-budget-bar { position: sticky; top: 0; z-index: 1; background: linear-gradient(165deg, var(--card-alt), var(--card)); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px 16px; margin-bottom: 14px; box-shadow: var(--shadow); }
+.kn-proposta-budget-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; margin-bottom: 8px; }
+.kn-proposta-budget-num { font-weight: 600; }
+.kn-proposta-budget-num.over { color: var(--clay); }
+.kn-proposta-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 4px; }
 .kn-proposta-nome { font-family: 'Inter Tight', sans-serif; font-size: 21px; letter-spacing: 0.02em; }
 .kn-proposta-kcal { font-family: 'Inter Tight', sans-serif; font-size: 21px; color: var(--accent); white-space: nowrap; }
 .kn-proposta-meta { font-size: 12px; color: var(--ink-soft); margin-bottom: 12px; }
@@ -2148,7 +2156,7 @@ export default function MindbiteApp() {
       content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: fotoDaUsare.split(",")[1] } });
       testoPrompt =
         `Questa è la foto del menù di un ristorante o di una mensa. ${frasePastoBudget} ` +
-        "Leggi i piatti disponibili nel menù e scegli le 2 opzioni migliori per restare in linea con questo budget, anche stimando di dover chiedere una porzione più piccola se necessario. " +
+        "Leggi le singole voci disponibili nel menù (antipasti, primi, secondi, contorni, dolci, bevande...) ed elenca fino a 8 voci individuali con una stima di kcal e macro ciascuna, così l'utente possa scegliere di combinarne più di una per raggiungere il budget indicato — NON proporre 2 pasti completi già combinati, ma le singole voci così come appaiono nel menù, ciascuna con la sua stima a sé stante. " +
         "Rispondi SOLO con un array JSON valido, senza testo introduttivo, senza spiegazioni, senza blocchi markdown. Formato esatto: " +
         '[{"nome": string, "kcalTotali": number, "carboidratiG": number, "grassiG": number, "proteineG": number, "motivo": string, "consiglioPorzione": string}]';
     } else {
@@ -2175,7 +2183,7 @@ export default function MindbiteApp() {
 
     try {
       const parsed = await chiediAClaude(content, 1200);
-      const lista = (Array.isArray(parsed) ? parsed : []).map((p) => ({ ...p, modo: consiglioModo }));
+      const lista = (Array.isArray(parsed) ? parsed : []).map((p) => ({ ...p, modo: consiglioModo, selezionata: false }));
       setProposteCena(lista);
       // La foto del menu ha esaurito il suo scopo: la scartiamo subito, non serve piu' e non va salvata.
       if (consiglioModo === "menu") setFotoMenuDataUrl(null);
@@ -2197,6 +2205,33 @@ export default function MindbiteApp() {
       ingredienti: p.ingredienti || [],
     });
     setToastDiario(`${pastoConsiglio} registrato/a dalla proposta.`);
+    setGiornoVisualizzato(null); setScreen("diario");
+    resetConsiglio();
+    setRiduzioneRecuperoAttiva(false);
+    setTimeout(() => setToastDiario(""), 4000);
+  }
+
+  // Selezione multipla delle voci di menù (modalita' "Consulta menù"): a
+  // differenza delle ricette da frigo, che sono 2 alternative complete gia'
+  // pensate per il budget, le voci di un menù vanno combinate dall'utente
+  // per avvicinarsi alle kcal del pasto (es. un primo + un contorno).
+  function toggleSelezioneProposta(idx) {
+    setProposteCena((prev) => prev.map((p, i) => (i === idx ? { ...p, selezionata: !p.selezionata } : p)));
+  }
+
+  function registraProposteSelezionate() {
+    const selezionate = proposteCena.filter((p) => p.selezionata);
+    if (selezionate.length === 0) return;
+    const nuove = selezionate.map((p) => ({
+      nome: p.nome,
+      kcal: p.kcalTotali,
+      carboidratiG: p.carboidratiG != null ? p.carboidratiG : null,
+      grassiG: p.grassiG != null ? p.grassiG : null,
+      proteineG: p.proteineG != null ? p.proteineG : null,
+      ingredienti: p.ingredienti || [],
+    }));
+    setPastiOggi((prev) => ({ ...prev, [pastoConsiglio]: [...prev[pastoConsiglio], ...nuove] }));
+    setToastDiario(`${selezionate.length} vo${selezionate.length === 1 ? "ce registrata" : "ci registrate"} come ${pastoConsiglio.toLowerCase()}.`);
     setGiornoVisualizzato(null); setScreen("diario");
     resetConsiglio();
     setRiduzioneRecuperoAttiva(false);
@@ -3974,44 +4009,75 @@ export default function MindbiteApp() {
                 <div className="kn-loading"><span className="kn-spinner" /> {consiglioModo === "menu" ? "Sto leggendo il menù…" : "Sto pensando alla soluzione migliore…"}</div>
               )}
 
-              {consiglioSub === "proposte" && (
-                <>
-                  {proposteCena.length === 0 && <div className="kn-empty">Nessuna proposta generata, riprova.</div>}
-                  {proposteCena.map((p, idx) => (
-                    <div className="kn-proposta-card" key={idx}>
-                      <div className="kn-proposta-top">
-                        <span className="kn-proposta-nome">{p.nome}</span>
-                        <span className="kn-proposta-kcal">{p.kcalTotali} kcal</span>
+              {consiglioSub === "proposte" && (() => {
+                const menuMode = consiglioModo === "menu";
+                const selezionate = proposteCena.filter((p) => p.selezionata);
+                const kcalSelezionate = selezionate.reduce((s, p) => s + (p.kcalTotali || 0), 0);
+                const sopraKcal = kcalSelezionate > budgetPasto.kcal;
+                return (
+                  <>
+                    {proposteCena.length === 0 && <div className="kn-empty">Nessuna proposta generata, riprova.</div>}
+
+                    {menuMode && proposteCena.length > 0 && (
+                      <div className="kn-proposta-budget-bar">
+                        <div className="kn-proposta-budget-top">
+                          <span>Selezionate: {selezionate.length}</span>
+                          <span className={"kn-proposta-budget-num" + (sopraKcal ? " over" : "")}>{kcalSelezionate} / {budgetPasto.kcal} kcal</span>
+                        </div>
+                        <div className="kn-bar-track">
+                          <div className={"kn-bar-fill" + (sopraKcal ? " over" : "")} style={{ width: Math.min(100, budgetPasto.kcal > 0 ? (kcalSelezionate / budgetPasto.kcal) * 100 : 0) + "%" }} />
+                        </div>
                       </div>
-                      {p.modo === "menu" ? (
-                        <>
-                          <div className="kn-proposta-meta">dal menù</div>
-                          <div className="kn-proposta-ing">{p.motivo}</div>
-                          {p.consiglioPorzione && <div className="kn-proposta-ing" style={{ fontStyle: "italic" }}>{p.consiglioPorzione}</div>}
-                        </>
-                      ) : (
-                        <>
-                          <div className="kn-proposta-meta">{p.tempoMinuti} min · {p.dolceIncluso ? "con dolce" : "senza dolce"}</div>
-                          <div className="kn-proposta-ing">{(p.ingredienti || []).map((i) => `${i.nome} (${i.grammi}g)`).join(" · ")}</div>
-                          {p.passaggi && p.passaggi.length > 0 && (
-                            <ol className="kn-proposta-steps">
-                              {p.passaggi.map((s, i) => (<li key={i}>{s}</li>))}
-                            </ol>
-                          )}
-                          {p.notaIntegrazione && (
-                            <div className="kn-nota-integrazione">🛒 {p.notaIntegrazione}</div>
-                          )}
-                        </>
-                      )}
-                      <div className="kn-proposta-btnrow">
-                        <button className="kn-proposta-btn-sm" onClick={() => condividiProposta(p)}>Condividi con la community</button>
-                        <button className="kn-proposta-btn-sm principale" onClick={() => registraProposta(p)}>Registra come {pastoConsiglio.toLowerCase()}</button>
+                    )}
+
+                    {proposteCena.map((p, idx) => (
+                      <div
+                        className={"kn-proposta-card" + (menuMode ? " selezionabile" : "") + (menuMode && p.selezionata ? " sel" : "")}
+                        key={idx}
+                        onClick={menuMode ? () => toggleSelezioneProposta(idx) : undefined}
+                      >
+                        <div className="kn-proposta-top">
+                          {menuMode && <span className="kn-proposta-check">{p.selezionata ? "✓" : ""}</span>}
+                          <span className="kn-proposta-nome" style={{ flex: 1 }}>{p.nome}</span>
+                          <span className="kn-proposta-kcal">{p.kcalTotali} kcal</span>
+                        </div>
+                        {p.modo === "menu" ? (
+                          <>
+                            <div className="kn-proposta-meta">dal menù</div>
+                            <div className="kn-proposta-ing">{p.motivo}</div>
+                            {p.consiglioPorzione && <div className="kn-proposta-ing" style={{ fontStyle: "italic" }}>{p.consiglioPorzione}</div>}
+                          </>
+                        ) : (
+                          <>
+                            <div className="kn-proposta-meta">{p.tempoMinuti} min · {p.dolceIncluso ? "con dolce" : "senza dolce"}</div>
+                            <div className="kn-proposta-ing">{(p.ingredienti || []).map((i) => `${i.nome} (${i.grammi}g)`).join(" · ")}</div>
+                            {p.passaggi && p.passaggi.length > 0 && (
+                              <ol className="kn-proposta-steps">
+                                {p.passaggi.map((s, i) => (<li key={i}>{s}</li>))}
+                              </ol>
+                            )}
+                            {p.notaIntegrazione && (
+                              <div className="kn-nota-integrazione">🛒 {p.notaIntegrazione}</div>
+                            )}
+                          </>
+                        )}
+                        {!menuMode && (
+                          <div className="kn-proposta-btnrow">
+                            <button className="kn-proposta-btn-sm" onClick={(e) => { e.stopPropagation(); condividiProposta(p); }}>Condividi con la community</button>
+                            <button className="kn-proposta-btn-sm principale" onClick={(e) => { e.stopPropagation(); registraProposta(p); }}>Registra come {pastoConsiglio.toLowerCase()}</button>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
-                  <button className="kn-btn kn-btn-ghost" onClick={() => setConsiglioSub("input")}>Rifai la richiesta</button>
-                </>
-              )}
+                    ))}
+                    {menuMode && proposteCena.length > 0 && (
+                      <button className="kn-btn" style={{ marginBottom: 12 }} disabled={selezionate.length === 0} onClick={registraProposteSelezionate}>
+                        Registra {selezionate.length > 0 ? `${selezionate.length} selezionat${selezionate.length === 1 ? "a" : "e"}` : "le voci selezionate"} come {pastoConsiglio.toLowerCase()}
+                      </button>
+                    )}
+                    <button className="kn-btn kn-btn-ghost" onClick={() => setConsiglioSub("input")}>Rifai la richiesta</button>
+                  </>
+                );
+              })()}
             </>
           );
         })()}

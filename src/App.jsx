@@ -2032,6 +2032,12 @@ export default function MindbiteApp() {
   const [consiglioSub, setConsiglioSub] = useState("input"); // input | analisi | proposte
   const [consiglioModo, setConsiglioModo] = useState("frigo"); // "frigo" | "menu"
   const [pastoConsiglio, setPastoConsiglio] = useState("Cena"); // "Pranzo" | "Cena"
+  // Solo per il pranzo: prima di generare proposte chiediamo se la cena e'
+  // gia' programmata, cosi' l'AI non tratta il pranzo come se fosse isolato
+  // dal resto della giornata (vedi notaCenaProgrammata in chiediConsiglio).
+  const [cenaProgrammata, setCenaProgrammata] = useState(null); // null | true | false
+  const [descrizioneCenaProgrammata, setDescrizioneCenaProgrammata] = useState("");
+  const [cenaDescrizioneConfermata, setCenaDescrizioneConfermata] = useState(false);
   const [descrizioneFrigo, setDescrizioneFrigo] = useState("");
   const [fotoFrigoDataUrl, setFotoFrigoDataUrl] = useState(null);
   const [fotoMenuDataUrl, setFotoMenuDataUrl] = useState(null);
@@ -2044,6 +2050,9 @@ export default function MindbiteApp() {
   function resetConsiglio() {
     setConsiglioSub("input");
     setConsiglioModo("frigo");
+    setCenaProgrammata(null);
+    setDescrizioneCenaProgrammata("");
+    setCenaDescrizioneConfermata(false);
     setDescrizioneFrigo("");
     setFotoFrigoDataUrl(null);
     setFotoMenuDataUrl(null);
@@ -2139,10 +2148,15 @@ export default function MindbiteApp() {
     const fatResiduo = budget.fat;
     const proteinResiduo = budget.protein;
     const nomePasto = pastoConsiglio === "Pranzo" ? "il pranzo" : "la cena";
+    const notaCenaProgrammata =
+      pastoConsiglio === "Pranzo" && cenaProgrammata && descrizioneCenaProgrammata.trim()
+        ? ` L'utente ha già in programma per cena: "${descrizioneCenaProgrammata.trim()}". Tienine conto: lascia un margine ragionevole nel budget calorico complessivo della giornata per quella cena, non trattare il pranzo come se fosse isolato dal resto della giornata.`
+        : "";
     const frasePastoBudget =
-      budget.base === "residuo"
+      (budget.base === "residuo"
         ? `Per ${nomePasto} di oggi l'utente ha a disposizione circa ${kcalResidue} kcal, ${carbResiduo}g di carboidrati, ${fatResiduo}g di grassi e ${proteinResiduo}g di proteine residui rispetto all'obiettivo giornaliero.`
-        : `Per ${nomePasto}, in un piano alimentare bilanciato sull'intera giornata, la porzione indicata e' di circa ${kcalResidue} kcal, ${carbResiduo}g di carboidrati, ${fatResiduo}g di grassi e ${proteinResiduo}g di proteine — indipendentemente da quanto gia' mangiato oggi.`;
+        : `Per ${nomePasto}, in un piano alimentare bilanciato sull'intera giornata, la porzione indicata e' di circa ${kcalResidue} kcal, ${carbResiduo}g di carboidrati, ${fatResiduo}g di grassi e ${proteinResiduo}g di proteine — indipendentemente da quanto gia' mangiato oggi.`) +
+      notaCenaProgrammata;
 
     const content = [];
     let testoPrompt;
@@ -3913,6 +3927,7 @@ export default function MindbiteApp() {
 
         {screen === "consiglio" && (() => {
           const budgetPasto = calcolaBudgetPasto(pastoConsiglio);
+          const gateCenaAttivo = pastoConsiglio === "Pranzo" && (cenaProgrammata === null || (cenaProgrammata === true && !cenaDescrizioneConfermata));
           return (
             <>
               <button className="kn-back-link" onClick={() => { resetConsiglio(); setRiduzioneRecuperoAttiva(false); setGiornoVisualizzato(null); setScreen("diario"); }}>‹ torna al diario</button>
@@ -3939,6 +3954,31 @@ export default function MindbiteApp() {
               </div>
 
               {consiglioSub === "input" && (
+                gateCenaAttivo ? (
+                  <div className="kn-field">
+                    {cenaProgrammata === null ? (
+                      <>
+                        <label className="kn-label">Hai già programmato la cena di oggi?</label>
+                        <p className="kn-sub">Così il pranzo che ti propongo tiene conto anche di quella, non solo di sé stesso.</p>
+                        <div className="kn-toggle-row">
+                          <div className="kn-toggle" onClick={() => setCenaProgrammata(false)}>No</div>
+                          <div className="kn-toggle" onClick={() => setCenaProgrammata(true)}>Sì</div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <label className="kn-label">Cosa mangerai a cena? Una breve descrizione basta.</label>
+                        <textarea
+                          className="kn-textarea"
+                          value={descrizioneCenaProgrammata}
+                          onChange={(e) => setDescrizioneCenaProgrammata(e.target.value)}
+                          placeholder="Es. pasta al pomodoro con tonno e insalata"
+                        />
+                        <button className="kn-btn" style={{ marginTop: 12 }} onClick={() => setCenaDescrizioneConfermata(true)}>Continua</button>
+                      </>
+                    )}
+                  </div>
+                ) : (
                 <>
                   <div className="kn-toggle-row" style={{ marginBottom: 18 }}>
                     <div className={"kn-toggle" + (consiglioModo === "frigo" ? " sel" : "")} onClick={() => setConsiglioModo("frigo")}>Cosa ho in casa</div>
@@ -4011,6 +4051,7 @@ export default function MindbiteApp() {
                     </>
                   )}
                 </>
+                )
               )}
 
               {consiglioSub === "analisi" && (

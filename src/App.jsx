@@ -2033,8 +2033,10 @@ export default function MindbiteApp() {
   const [consiglioModo, setConsiglioModo] = useState("frigo"); // "frigo" | "menu"
   const [pastoConsiglio, setPastoConsiglio] = useState("Cena"); // "Pranzo" | "Cena"
   // Solo per il pranzo: prima di generare proposte chiediamo se la cena e'
-  // gia' programmata, cosi' l'AI non tratta il pranzo come se fosse isolato
-  // dal resto della giornata (vedi notaCenaProgrammata in chiediConsiglio).
+  // gia' programmata, cosi' l'AI puo' usare il pranzo per compensare lo
+  // squilibrio nutrizionale prevedibile di quella cena (es. piu' proteine a
+  // pranzo se la cena sara' scarsa, come una pizza), non solo per lasciare
+  // margine di kcal (vedi notaCenaProgrammata in chiediConsiglio).
   const [cenaProgrammata, setCenaProgrammata] = useState(null); // null | true | false
   const [descrizioneCenaProgrammata, setDescrizioneCenaProgrammata] = useState("");
   const [cenaDescrizioneConfermata, setCenaDescrizioneConfermata] = useState(false);
@@ -2150,7 +2152,7 @@ export default function MindbiteApp() {
     const nomePasto = pastoConsiglio === "Pranzo" ? "il pranzo" : "la cena";
     const notaCenaProgrammata =
       pastoConsiglio === "Pranzo" && cenaProgrammata && descrizioneCenaProgrammata.trim()
-        ? ` L'utente ha già in programma per cena: "${descrizioneCenaProgrammata.trim()}". Tienine conto: lascia un margine ragionevole nel budget calorico complessivo della giornata per quella cena, non trattare il pranzo come se fosse isolato dal resto della giornata.`
+        ? ` L'utente ha già in programma per cena: "${descrizioneCenaProgrammata.trim()}". Non limitarti a lasciare margine di kcal per dopo: stima la composizione nutrizionale prevedibile di quella cena (es. ricca di carboidrati e grassi ma povera di proteine, come una pizza) e usa il pranzo per COMPENSARE quello squilibrio — piu' proteine e meno carboidrati/grassi a pranzo se la cena ne sara' scarsa, o viceversa — cosi' il totale della giornata resta bilanciato tra i tre macronutrienti, non solo nelle kcal complessive.`
         : "";
     const frasePastoBudget =
       (budget.base === "residuo"

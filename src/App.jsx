@@ -1634,6 +1634,7 @@ export default function MindbiteApp() {
       carboidratiG: m.carb,
       grassiG: m.fat,
       proteineG: m.protein,
+      grammi: g > 0 ? g : null,
     });
     setToastDiario("Alimento aggiunto.");
     resetCerca();
@@ -2156,9 +2157,9 @@ export default function MindbiteApp() {
       content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: fotoDaUsare.split(",")[1] } });
       testoPrompt =
         `Questa è la foto del menù di un ristorante o di una mensa. ${frasePastoBudget} ` +
-        "Proponi 4 abbinamenti, non piatti isolati: ciascuno deve combinare 2-3 voci per avvicinarsi il più possibile, nel complesso, al budget indicato sopra — non fermarti a una singola voce se da sola non lo raggiunge. Usa prioritariamente le voci realmente presenti nel menù della foto; se il menù non offre abbastanza scelta per comporre un abbinamento vicino al budget (es. mancano contorni proteici, o e' tutto troppo leggero/pesante), integralo con un alimento standard non necessariamente presente nel menù (es. riso bianco, insalata, petto di pollo, yogurt) e spiegalo chiaramente nel campo \"motivo\", specificando cosa viene dal menù e cosa e' un'aggiunta standard consigliata a parte, cosi' l'utente capisce se il menù da solo gli basta o deve integrare. Nel campo \"nome\" elenca le voci combinate separate da \" + \" (es. \"Riso + Pollo alla griglia + Insalata\"). " +
+        "Proponi 4 abbinamenti, non piatti isolati: ciascuno deve combinare 2-3 voci per avvicinarsi il più possibile, nel complesso, al budget indicato sopra — non fermarti a una singola voce se da sola non lo raggiunge. Usa prioritariamente le voci realmente presenti nel menù della foto; se il menù non offre abbastanza scelta per comporre un abbinamento vicino al budget (es. mancano contorni proteici, o e' tutto troppo leggero/pesante), integralo con un alimento standard non necessariamente presente nel menù (es. riso bianco, insalata, petto di pollo, yogurt) e spiegalo chiaramente nel campo \"motivo\", specificando cosa viene dal menù e cosa e' un'aggiunta standard consigliata a parte, cosi' l'utente capisce se il menù da solo gli basta o deve integrare. Nel campo \"nome\" elenca le voci combinate separate da \" + \" (es. \"Riso + Pollo alla griglia + Insalata\"). Nel campo \"grammiTotali\" stima il peso complessivo indicativo dell'abbinamento in grammi. " +
         "Rispondi SOLO con un array JSON valido, senza testo introduttivo, senza spiegazioni, senza blocchi markdown. Formato esatto: " +
-        '[{"nome": string, "kcalTotali": number, "carboidratiG": number, "grassiG": number, "proteineG": number, "motivo": string, "consiglioPorzione": string}]';
+        '[{"nome": string, "kcalTotali": number, "grammiTotali": number, "carboidratiG": number, "grassiG": number, "proteineG": number, "motivo": string, "consiglioPorzione": string}]';
     } else {
       const fraseCompletamento =
         pastoConsiglio === "Cena"
@@ -2202,6 +2203,7 @@ export default function MindbiteApp() {
       carboidratiG: p.carboidratiG != null ? p.carboidratiG : null,
       grassiG: p.grassiG != null ? p.grassiG : null,
       proteineG: p.proteineG != null ? p.proteineG : null,
+      grammi: p.grammiTotali != null ? p.grammiTotali : null,
       ingredienti: p.ingredienti || [],
     });
     setToastDiario(`${pastoConsiglio} registrato/a dalla proposta.`);
@@ -2228,6 +2230,7 @@ export default function MindbiteApp() {
       carboidratiG: p.carboidratiG != null ? p.carboidratiG : null,
       grassiG: p.grassiG != null ? p.grassiG : null,
       proteineG: p.proteineG != null ? p.proteineG : null,
+      grammi: p.grammiTotali != null ? p.grammiTotali : null,
       ingredienti: p.ingredienti || [],
     }));
     setPastiOggi((prev) => ({ ...prev, [pastoConsiglio]: [...prev[pastoConsiglio], ...nuove] }));
@@ -2904,7 +2907,8 @@ export default function MindbiteApp() {
                           {items.map((it, idx) => {
                             const haIngredienti = it.ingredienti && it.ingredienti.length > 0;
                             const haMacro = it.carboidratiG != null || it.grassiG != null || it.proteineG != null;
-                            const haDettaglio = haIngredienti || haMacro;
+                            const haGrammi = it.grammi != null;
+                            const haDettaglio = haIngredienti || haMacro || haGrammi;
                             const chiave = nome + "-" + idx;
                             const espansoItem = !!dettagliEspansi[chiave];
                             return (
@@ -2933,9 +2937,13 @@ export default function MindbiteApp() {
                                         <span>{ing.kcal} kcal</span>
                                       </div>
                                     ))}
-                                    {!haIngredienti && haMacro && (
+                                    {!haIngredienti && (haGrammi || haMacro) && (
                                       <div className="kn-meal-item-detail-row">
-                                        <span>Carbo {arrotondaG(it.carboidratiG)}g · Grassi {arrotondaG(it.grassiG)}g · Proteine {arrotondaG(it.proteineG)}g</span>
+                                        <span>
+                                          {haGrammi
+                                            ? `${arrotondaG(it.grammi)}g`
+                                            : `Carbo ${arrotondaG(it.carboidratiG)}g · Grassi ${arrotondaG(it.grassiG)}g · Proteine ${arrotondaG(it.proteineG)}g`}
+                                        </span>
                                       </div>
                                     )}
                                   </div>

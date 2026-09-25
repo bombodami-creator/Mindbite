@@ -1634,6 +1634,7 @@ export default function MindbiteApp() {
       carboidratiG: m.carb,
       grassiG: m.fat,
       proteineG: m.protein,
+      grammi: g > 0 ? g : null,
     });
     setToastDiario("Alimento aggiunto.");
     resetCerca();
@@ -2031,6 +2032,14 @@ export default function MindbiteApp() {
   const [consiglioSub, setConsiglioSub] = useState("input"); // input | analisi | proposte
   const [consiglioModo, setConsiglioModo] = useState("frigo"); // "frigo" | "menu"
   const [pastoConsiglio, setPastoConsiglio] = useState("Cena"); // "Pranzo" | "Cena"
+  // Solo per il pranzo: prima di generare proposte chiediamo se la cena e'
+  // gia' programmata, cosi' l'AI puo' usare il pranzo per compensare lo
+  // squilibrio nutrizionale prevedibile di quella cena (es. piu' proteine a
+  // pranzo se la cena sara' scarsa, come una pizza), non solo per lasciare
+  // margine di kcal (vedi notaCenaProgrammata in chiediConsiglio).
+  const [cenaProgrammata, setCenaProgrammata] = useState(null); // null | true | false
+  const [descrizioneCenaProgrammata, setDescrizioneCenaProgrammata] = useState("");
+  const [cenaDescrizioneConfermata, setCenaDescrizioneConfermata] = useState(false);
   const [descrizioneFrigo, setDescrizioneFrigo] = useState("");
   const [fotoFrigoDataUrl, setFotoFrigoDataUrl] = useState(null);
   const [fotoMenuDataUrl, setFotoMenuDataUrl] = useState(null);
@@ -2043,6 +2052,9 @@ export default function MindbiteApp() {
   function resetConsiglio() {
     setConsiglioSub("input");
     setConsiglioModo("frigo");
+    setCenaProgrammata(null);
+    setDescrizioneCenaProgrammata("");
+    setCenaDescrizioneConfermata(false);
     setDescrizioneFrigo("");
     setFotoFrigoDataUrl(null);
     setFotoMenuDataUrl(null);
@@ -2138,10 +2150,15 @@ export default function MindbiteApp() {
     const fatResiduo = budget.fat;
     const proteinResiduo = budget.protein;
     const nomePasto = pastoConsiglio === "Pranzo" ? "il pranzo" : "la cena";
+    const notaCenaProgrammata =
+      pastoConsiglio === "Pranzo" && cenaProgrammata && descrizioneCenaProgrammata.trim()
+        ? ` L'utente ha già in programma per cena: "${descrizioneCenaProgrammata.trim()}". Non limitarti a lasciare margine di kcal per dopo: stima la composizione nutrizionale prevedibile di quella cena (es. ricca di carboidrati e grassi ma povera di proteine, come una pizza) e usa il pranzo per COMPENSARE quello squilibrio — piu' proteine e meno carboidrati/grassi a pranzo se la cena ne sara' scarsa, o viceversa — cosi' il totale della giornata resta bilanciato tra i tre macronutrienti, non solo nelle kcal complessive.`
+        : "";
     const frasePastoBudget =
-      budget.base === "residuo"
+      (budget.base === "residuo"
         ? `Per ${nomePasto} di oggi l'utente ha a disposizione circa ${kcalResidue} kcal, ${carbResiduo}g di carboidrati, ${fatResiduo}g di grassi e ${proteinResiduo}g di proteine residui rispetto all'obiettivo giornaliero.`
-        : `Per ${nomePasto}, in un piano alimentare bilanciato sull'intera giornata, la porzione indicata e' di circa ${kcalResidue} kcal, ${carbResiduo}g di carboidrati, ${fatResiduo}g di grassi e ${proteinResiduo}g di proteine — indipendentemente da quanto gia' mangiato oggi.`;
+        : `Per ${nomePasto}, in un piano alimentare bilanciato sull'intera giornata, la porzione indicata e' di circa ${kcalResidue} kcal, ${carbResiduo}g di carboidrati, ${fatResiduo}g di grassi e ${proteinResiduo}g di proteine — indipendentemente da quanto gia' mangiato oggi.`) +
+      notaCenaProgrammata;
 
     const content = [];
     let testoPrompt;
@@ -2156,9 +2173,9 @@ export default function MindbiteApp() {
       content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: fotoDaUsare.split(",")[1] } });
       testoPrompt =
         `Questa è la foto del menù di un ristorante o di una mensa. ${frasePastoBudget} ` +
-        "Proponi 4 abbinamenti, non piatti isolati: ciascuno deve combinare 2-3 voci per avvicinarsi il più possibile, nel complesso, al budget indicato sopra — non fermarti a una singola voce se da sola non lo raggiunge. Usa prioritariamente le voci realmente presenti nel menù della foto; se il menù non offre abbastanza scelta per comporre un abbinamento vicino al budget (es. mancano contorni proteici, o e' tutto troppo leggero/pesante), integralo con un alimento standard non necessariamente presente nel menù (es. riso bianco, insalata, petto di pollo, yogurt) e spiegalo chiaramente nel campo \"motivo\", specificando cosa viene dal menù e cosa e' un'aggiunta standard consigliata a parte, cosi' l'utente capisce se il menù da solo gli basta o deve integrare. Nel campo \"nome\" elenca le voci combinate separate da \" + \" (es. \"Riso + Pollo alla griglia + Insalata\"). " +
+        "Proponi 4 abbinamenti, non piatti isolati: ciascuno deve combinare 2-3 voci per avvicinarsi il più possibile, nel complesso, al budget indicato sopra — non fermarti a una singola voce se da sola non lo raggiunge. Usa prioritariamente le voci realmente presenti nel menù della foto; se il menù non offre abbastanza scelta per comporre un abbinamento vicino al budget (es. mancano contorni proteici, o e' tutto troppo leggero/pesante), integralo con un alimento standard non necessariamente presente nel menù (es. riso bianco, insalata, petto di pollo, yogurt) e spiegalo chiaramente nel campo \"motivo\", specificando cosa viene dal menù e cosa e' un'aggiunta standard consigliata a parte, cosi' l'utente capisce se il menù da solo gli basta o deve integrare. Nel campo \"nome\" elenca le voci combinate separate da \" + \" (es. \"Riso + Pollo alla griglia + Insalata\"). Nel campo \"grammiTotali\" stima il peso complessivo indicativo dell'abbinamento in grammi. " +
         "Rispondi SOLO con un array JSON valido, senza testo introduttivo, senza spiegazioni, senza blocchi markdown. Formato esatto: " +
-        '[{"nome": string, "kcalTotali": number, "carboidratiG": number, "grassiG": number, "proteineG": number, "motivo": string, "consiglioPorzione": string}]';
+        '[{"nome": string, "kcalTotali": number, "grammiTotali": number, "carboidratiG": number, "grassiG": number, "proteineG": number, "motivo": string, "consiglioPorzione": string}]';
     } else {
       const fraseCompletamento =
         pastoConsiglio === "Cena"
@@ -2202,6 +2219,7 @@ export default function MindbiteApp() {
       carboidratiG: p.carboidratiG != null ? p.carboidratiG : null,
       grassiG: p.grassiG != null ? p.grassiG : null,
       proteineG: p.proteineG != null ? p.proteineG : null,
+      grammi: p.grammiTotali != null ? p.grammiTotali : null,
       ingredienti: p.ingredienti || [],
     });
     setToastDiario(`${pastoConsiglio} registrato/a dalla proposta.`);
@@ -2228,6 +2246,7 @@ export default function MindbiteApp() {
       carboidratiG: p.carboidratiG != null ? p.carboidratiG : null,
       grassiG: p.grassiG != null ? p.grassiG : null,
       proteineG: p.proteineG != null ? p.proteineG : null,
+      grammi: p.grammiTotali != null ? p.grammiTotali : null,
       ingredienti: p.ingredienti || [],
     }));
     setPastiOggi((prev) => ({ ...prev, [pastoConsiglio]: [...prev[pastoConsiglio], ...nuove] }));
@@ -2904,7 +2923,8 @@ export default function MindbiteApp() {
                           {items.map((it, idx) => {
                             const haIngredienti = it.ingredienti && it.ingredienti.length > 0;
                             const haMacro = it.carboidratiG != null || it.grassiG != null || it.proteineG != null;
-                            const haDettaglio = haIngredienti || haMacro;
+                            const haGrammi = it.grammi != null;
+                            const haDettaglio = haIngredienti || haMacro || haGrammi;
                             const chiave = nome + "-" + idx;
                             const espansoItem = !!dettagliEspansi[chiave];
                             return (
@@ -2933,9 +2953,13 @@ export default function MindbiteApp() {
                                         <span>{ing.kcal} kcal</span>
                                       </div>
                                     ))}
-                                    {!haIngredienti && haMacro && (
+                                    {!haIngredienti && (haGrammi || haMacro) && (
                                       <div className="kn-meal-item-detail-row">
-                                        <span>Carbo {arrotondaG(it.carboidratiG)}g · Grassi {arrotondaG(it.grassiG)}g · Proteine {arrotondaG(it.proteineG)}g</span>
+                                        <span>
+                                          {haGrammi
+                                            ? `${arrotondaG(it.grammi)}g`
+                                            : `Carbo ${arrotondaG(it.carboidratiG)}g · Grassi ${arrotondaG(it.grassiG)}g · Proteine ${arrotondaG(it.proteineG)}g`}
+                                        </span>
                                       </div>
                                     )}
                                   </div>
@@ -3905,6 +3929,7 @@ export default function MindbiteApp() {
 
         {screen === "consiglio" && (() => {
           const budgetPasto = calcolaBudgetPasto(pastoConsiglio);
+          const gateCenaAttivo = pastoConsiglio === "Pranzo" && (cenaProgrammata === null || (cenaProgrammata === true && !cenaDescrizioneConfermata));
           return (
             <>
               <button className="kn-back-link" onClick={() => { resetConsiglio(); setRiduzioneRecuperoAttiva(false); setGiornoVisualizzato(null); setScreen("diario"); }}>‹ torna al diario</button>
@@ -3931,6 +3956,31 @@ export default function MindbiteApp() {
               </div>
 
               {consiglioSub === "input" && (
+                gateCenaAttivo ? (
+                  <div className="kn-field">
+                    {cenaProgrammata === null ? (
+                      <>
+                        <label className="kn-label">Hai già programmato la cena di oggi?</label>
+                        <p className="kn-sub">Così il pranzo che ti propongo tiene conto anche di quella, non solo di sé stesso.</p>
+                        <div className="kn-toggle-row">
+                          <div className="kn-toggle" onClick={() => setCenaProgrammata(false)}>No</div>
+                          <div className="kn-toggle" onClick={() => setCenaProgrammata(true)}>Sì</div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <label className="kn-label">Cosa mangerai a cena? Una breve descrizione basta.</label>
+                        <textarea
+                          className="kn-textarea"
+                          value={descrizioneCenaProgrammata}
+                          onChange={(e) => setDescrizioneCenaProgrammata(e.target.value)}
+                          placeholder="Es. pasta al pomodoro con tonno e insalata"
+                        />
+                        <button className="kn-btn" style={{ marginTop: 12 }} onClick={() => setCenaDescrizioneConfermata(true)}>Continua</button>
+                      </>
+                    )}
+                  </div>
+                ) : (
                 <>
                   <div className="kn-toggle-row" style={{ marginBottom: 18 }}>
                     <div className={"kn-toggle" + (consiglioModo === "frigo" ? " sel" : "")} onClick={() => setConsiglioModo("frigo")}>Cosa ho in casa</div>
@@ -4003,6 +4053,7 @@ export default function MindbiteApp() {
                     </>
                   )}
                 </>
+                )
               )}
 
               {consiglioSub === "analisi" && (

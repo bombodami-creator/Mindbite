@@ -1528,6 +1528,53 @@ export default function MindbiteApp() {
     setPastiOggi((prev) => ({ ...prev, [pasto]: [...prev[pasto], voce] }));
   }
 
+  // --- Modifica quantita' di un alimento gia' registrato (qualsiasi pasto) ---
+  // Riscala proporzionalmente kcal, macro, grammi e (se presente) ogni
+  // ingrediente della lista per lo stesso fattore: non serve sapere se
+  // l'alimento viene dalla ricerca FatSecret, dal riconoscimento foto o da
+  // una proposta del Consiglia, funziona identico su tutti.
+  const [modificaQuantita, setModificaQuantita] = useState(null); // { pasto, idx, valore, unita, base }
+
+  function riscalaAlimento(it, fattore) {
+    if (!fattore || fattore <= 0 || !isFinite(fattore)) return it;
+    const scala = (v) => (v == null ? v : Math.max(0, Math.round(v * fattore)));
+    return {
+      ...it,
+      kcal: scala(it.kcal),
+      carboidratiG: it.carboidratiG != null ? scala(it.carboidratiG) : it.carboidratiG,
+      grassiG: it.grassiG != null ? scala(it.grassiG) : it.grassiG,
+      proteineG: it.proteineG != null ? scala(it.proteineG) : it.proteineG,
+      grammi: it.grammi != null ? scala(it.grammi) : it.grammi,
+      ingredienti: it.ingredienti ? it.ingredienti.map((ing) => ({ ...ing, grammi: scala(ing.grammi), kcal: scala(ing.kcal) })) : it.ingredienti,
+    };
+  }
+
+  function avviaModificaQuantita(pasto, idx, it) {
+    const haIng = it.ingredienti && it.ingredienti.length > 0;
+    const grammiIngredienti = haIng ? it.ingredienti.reduce((s, ing) => s + (ing.grammi || 0), 0) : 0;
+    if (it.grammi != null) {
+      setModificaQuantita({ pasto, idx, valore: String(it.grammi), unita: "g", base: it.grammi });
+    } else if (haIng && grammiIngredienti > 0) {
+      setModificaQuantita({ pasto, idx, valore: String(grammiIngredienti), unita: "g", base: grammiIngredienti });
+    } else {
+      setModificaQuantita({ pasto, idx, valore: String(it.kcal), unita: "kcal", base: it.kcal });
+    }
+  }
+
+  function confermaModificaQuantita() {
+    if (!modificaQuantita) return;
+    const { pasto, idx, valore, base } = modificaQuantita;
+    const nuovo = parseFloat(valore.replace(",", "."));
+    if (nuovo > 0 && base > 0) {
+      const fattore = nuovo / base;
+      setPastiOggi((prev) => ({
+        ...prev,
+        [pasto]: prev[pasto].map((it, i) => (i === idx ? riscalaAlimento(it, fattore) : it)),
+      }));
+    }
+    setModificaQuantita(null);
+  }
+
   // --- Cerca alimento: elenco locale + ricerca live su FatSecret (se configurata) ---
   const [cercaQuery, setCercaQuery] = useState("");
   const [risultatiRemoti, setRisultatiRemoti] = useState(null); // null = usa elenco locale
@@ -2924,7 +2971,7 @@ export default function MindbiteApp() {
                             const haIngredienti = it.ingredienti && it.ingredienti.length > 0;
                             const haMacro = it.carboidratiG != null || it.grassiG != null || it.proteineG != null;
                             const haGrammi = it.grammi != null;
-                            const haDettaglio = haIngredienti || haMacro || haGrammi;
+                            const haDettaglio = haIngredienti || haMacro || haGrammi || vistaOggi;
                             const chiave = nome + "-" + idx;
                             const espansoItem = !!dettagliEspansi[chiave];
                             return (
@@ -2961,6 +3008,24 @@ export default function MindbiteApp() {
                                             : `Carbo ${arrotondaG(it.carboidratiG)}g · Grassi ${arrotondaG(it.grassiG)}g · Proteine ${arrotondaG(it.proteineG)}g`}
                                         </span>
                                       </div>
+                                    )}
+                                    {vistaOggi && (
+                                      modificaQuantita && modificaQuantita.pasto === nome && modificaQuantita.idx === idx ? (
+                                        <div className="kn-meal-item-detail-row" style={{ justifyContent: "flex-start", gap: 8, alignItems: "center" }} onClick={(e) => e.stopPropagation()}>
+                                          <input
+                                            className="kn-ing-grams"
+                                            type="number"
+                                            min="1"
+                                            value={modificaQuantita.valore}
+                                            onChange={(e) => setModificaQuantita((m) => ({ ...m, valore: e.target.value }))}
+                                          />
+                                          <span>{modificaQuantita.unita}</span>
+                                          <button className="kn-link" style={{ fontSize: 12 }} onClick={confermaModificaQuantita}>Salva</button>
+                                          <button className="kn-link" style={{ fontSize: 12 }} onClick={() => setModificaQuantita(null)}>Annulla</button>
+                                        </div>
+                                      ) : (
+                                        <button className="kn-meal-add-link" onClick={(e) => { e.stopPropagation(); avviaModificaQuantita(nome, idx, it); }}>Modifica quantità</button>
+                                      )
                                     )}
                                   </div>
                                 )}
